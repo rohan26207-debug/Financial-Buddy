@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { StoreProvider } from './lib/store';
 import Layout from './components/Layout';
 import Loans from './pages/Loans';
@@ -16,7 +16,7 @@ function App() {
   return (
     <StoreProvider>
       <div className="App">
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route element={<Layout />}> 
               <Route path="/" element={<Navigate to="/loans" replace />} />
@@ -29,7 +29,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
         <Toaster position="top-center" richColors />
       </div>
     </StoreProvider>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Menu, ChevronRight, Trash2, TrendingUp, PieChart, Building2, LineChart, Layers, Coins, Wallet } from 'lucide-react';
 import { useStore, useCurrency, cryptoId } from '../lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
@@ -31,6 +32,7 @@ function TypeIcon({ type }) {
 }
 
 export default function Investments() {
+  const { openDrawer } = useOutletContext();
   const { state, upsertItem, removeItem } = useStore();
   const { format } = useCurrency();
   const [search, setSearch] = useState('');
@@ -62,7 +64,7 @@ export default function Investments() {
   return (
     <div className="px-5 pt-4">
       <div className="flex items-center justify-between">
-        <button className="p-2 -ml-2 text-gray-700"><Menu size={22} /></button>
+        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
       </div>
 
       <div className="flex items-center justify-between mt-2">

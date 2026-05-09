@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Menu, ChevronRight, Trash2 } from 'lucide-react';
 import { useStore, formatDateShort, cryptoId } from '../lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 
 export default function Reminders() {
+  const { openDrawer } = useOutletContext();
   const { state, upsertItem, removeItem } = useStore();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null);
@@ -42,7 +44,7 @@ export default function Reminders() {
   return (
     <div className="px-5 pt-4">
       <div className="flex items-center justify-between">
-        <button className="p-2 -ml-2 text-gray-700"><Menu size={22} /></button>
+        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
       </div>
       <div className="flex items-center justify-between mt-2">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Daily Reminders</h1>

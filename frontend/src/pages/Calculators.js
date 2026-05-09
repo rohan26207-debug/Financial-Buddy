@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Search, Menu, ChevronRight, Plus, Calculator as CalcIcon, Home, Building, PiggyBank, Briefcase, Sprout, Coins, BarChart3, Trash2 } from 'lucide-react';
 import { useStore, useCurrency, cryptoId } from '../lib/store';
-import { useNavigate } from 'react-router-dom';
 import { calculatorPrimary } from '../lib/calc';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
@@ -40,6 +40,7 @@ const TYPES = [
 ];
 
 export default function Calculators() {
+  const { openDrawer } = useOutletContext();
   const { state, upsertItem, removeItem } = useStore();
   const { format } = useCurrency();
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ export default function Calculators() {
   return (
     <div className="px-5 pt-4">
       <div className="flex items-center justify-between">
-        <button className="p-2 -ml-2 text-gray-700"><Menu size={22} /></button>
+        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
       </div>
       <div className="flex items-center justify-between mt-2">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Financial Calculators</h1>

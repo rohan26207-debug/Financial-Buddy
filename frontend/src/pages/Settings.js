@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Menu, Download, Upload, RefreshCw, Globe, Info, Wallet, Database, ChevronRight } from 'lucide-react';
 import { useStore, CURRENCIES } from '../lib/store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -33,6 +34,7 @@ function Row({ icon: Icon, title, subtitle, right, onClick, danger }) {
 }
 
 export default function Settings() {
+  const { openDrawer } = useOutletContext();
   const { state, updateSettings, exportData, importData, resetData } = useStore();
   const fileInputRef = useRef(null);
   const [importing, setImporting] = useState(false);
@@ -112,7 +114,7 @@ export default function Settings() {
   return (
     <div className="px-5 pt-4">
       <div className="flex items-center justify-between">
-        <button className="p-2 -ml-2 text-gray-700"><Menu size={22} /></button>
+        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
       </div>
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">Settings</h1>
 
