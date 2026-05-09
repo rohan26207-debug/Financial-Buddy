@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Banknote, DollarSign, Clock, ListChecks, Calculator, Settings as SettingsIcon, Wallet, Info, HandCoins, ContactRound } from 'lucide-react';
+import { Banknote, DollarSign, Clock, ListChecks, Calculator, Settings as SettingsIcon, Wallet, Info, HandCoins, ContactRound, DatabaseBackup } from 'lucide-react';
 
 const items = [
   { to: '/investments', label: 'Investments', icon: DollarSign },
@@ -14,6 +14,7 @@ const items = [
 
 const meta = [
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
+  { to: '/backup', label: 'Backup', icon: DatabaseBackup },
   { to: '/contact', label: 'Contact Info', icon: ContactRound },
 ];
 

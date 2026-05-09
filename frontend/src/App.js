@@ -11,6 +11,7 @@ import Todos from './pages/Todos';
 import Calculators from './pages/Calculators';
 import CalculatorDetail from './pages/CalculatorDetail';
 import Settings from './pages/Settings';
+import Backup from './pages/Backup';
 import ContactInfo from './pages/ContactInfo';
 import { Toaster } from './components/ui/sonner';
 
@@ -30,6 +31,7 @@ function App() {
               <Route path="/calculators" element={<Calculators />} />
               <Route path="/calculators/:id" element={<CalculatorDetail />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/backup" element={<Backup />} />
               <Route path="/contact" element={<ContactInfo />} />
             </Route>
           </Routes>

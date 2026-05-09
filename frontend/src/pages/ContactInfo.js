@@ -38,10 +38,10 @@ export default function ContactInfo() {
 
       <p className="mt-4 text-[11px] text-center text-gray-400">Changes save automatically.</p>
 
-      <div className="mt-6 mb-6 rounded-2xl border border-gray-100 bg-white px-4 py-4 text-center">
+      <div className="mt-6 mb-6 rounded-2xl border border-gray-100 bg-white px-4 py-4 text-left">
         <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">App made by</div>
         <div className="mt-1 text-base font-bold text-gray-900">Rohan R Khandve</div>
-        <div className="mt-1 text-xs text-gray-500">Contact:</div>
+        <div className="mt-2 text-xs text-gray-500">Contact</div>
         <a
           href="mailto:vishnuparvatipetroleum@gmail.com"
           className="text-sm font-semibold text-teal-600 hover:underline break-all"
