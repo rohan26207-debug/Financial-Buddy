@@ -1,35 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Menu, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Menu, ChevronRight, Pencil, Trash2, Banknote } from 'lucide-react';
 import { useStore, useCurrency, formatDateShort, cryptoId } from '../lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 
-const STATUS_OPTIONS = ['ACTIVE', 'DEFAULTED', 'PAID', 'PENDING'];
-
-function StatusBadge({ status }) {
-  const colors = {
-    ACTIVE: 'text-teal-600',
-    DEFAULTED: 'text-rose-600',
-    PAID: 'text-emerald-600',
-    PENDING: 'text-amber-600',
-  };
-  return <span className={`status-badge uppercase ${colors[status] || 'text-gray-500'}`}>{status}</span>;
-}
-
-function LoanThumb({ status }) {
-  const tints = {
-    ACTIVE: 'from-teal-50 to-teal-100',
-    DEFAULTED: 'from-rose-50 to-rose-100',
-    PAID: 'from-emerald-50 to-emerald-100',
-    PENDING: 'from-amber-50 to-amber-100',
-  };
-  return <div className={`w-14 h-14 rounded-lg bg-gradient-to-br ${tints[status] || 'from-gray-100 to-gray-200'}`} />;
+function LoanThumb() {
+  return (
+    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center">
+      <Banknote size={26} className="text-teal-600" strokeWidth={1.8} />
+    </div>
+  );
 }
 
 export default function Loans() {
@@ -43,25 +28,24 @@ export default function Loans() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return state.loans;
-    return state.loans.filter((l) => l.bank.toLowerCase().includes(q) || l.status.toLowerCase().includes(q));
+    return state.loans.filter((l) => l.bank.toLowerCase().includes(q));
   }, [search, state.loans]);
 
-  // Loans summary: total current outstanding + total initial across active/defaulted (exclude PAID)
+  // Loans summary: totals across all loans
   const totals = useMemo(() => {
-    let current = 0, initial = 0;
+    let current = 0, initial = 0, emi = 0;
     for (const l of state.loans) {
-      if (l.status === 'PAID') continue;
       const cur = Number(l.amount) || 0;
       const init = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? cur : Number(l.initialAmount) || 0;
       current += cur;
       initial += init;
+      emi += Number(l.emi) || 0;
     }
-    return { current, initial };
+    return { current, initial, emi };
   }, [state.loans]);
 
-  const startNew = () => { setEditing({ id: '', bank: '', status: 'ACTIVE', startDate: '', endDate: '', initialAmount: 0, amount: 0, interestRate: 0, emi: 0, notes: '' }); setOpen(true); };
+  const startNew = () => { setEditing({ id: '', bank: '', startDate: '', endDate: '', initialAmount: 0, amount: 0, interestRate: 0, emi: 0, notes: '' }); setOpen(true); };
   const startEdit = (l) => {
-    // Backfill initialAmount for legacy data
     const initialAmount = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
     setEditing({ ...l, initialAmount });
     setOpen(true);
@@ -75,7 +59,6 @@ export default function Loans() {
       ...editing,
       id: editing.id || cryptoId(),
       initialAmount,
-      // For new loans without an explicit current amount, use initial
       amount: editing.id ? currentAmount : (currentAmount || initialAmount),
       interestRate: Number(editing.interestRate) || 0,
       emi: Number(editing.emi) || 0,
@@ -107,8 +90,8 @@ export default function Loans() {
             <div className="text-xl font-bold text-teal-700">{format(totals.current)}</div>
           </div>
           <div className="text-right">
-            <div className="text-[11px] uppercase font-semibold tracking-wider text-gray-500">Total Initial</div>
-            <div className="text-base font-semibold text-gray-700">{format(totals.initial)}</div>
+            <div className="text-[11px] uppercase font-semibold tracking-wider text-gray-500">Total EMI</div>
+            <div className="text-base font-semibold text-gray-700">{format(totals.emi)}</div>
           </div>
         </div>
       )}
@@ -128,14 +111,20 @@ export default function Loans() {
           return (
             <li key={l.id}>
               <button onClick={() => startEdit(l)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
-                <LoanThumb status={l.status} />
+                <LoanThumb />
                 <div className="flex-1 min-w-0">
-                  <StatusBadge status={l.status} />
                   <div className="text-base font-bold text-gray-900 truncate">{l.bank}</div>
                   <div className="text-sm text-gray-500 truncate">{formatDateShort(l.startDate)} to {formatDateShort(l.endDate)}</div>
-                  <div className="text-sm mt-0.5">
-                    <span className="font-semibold text-teal-600">{format(l.amount)}</span>
-                    {showSplit && <span className="text-gray-400"> of {format(initialAmount)}</span>}
+                  <div className="text-sm mt-0.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0 truncate">
+                      <span className="font-semibold text-teal-600">{format(l.amount)}</span>
+                      {showSplit && <span className="text-gray-400"> of {format(initialAmount)}</span>}
+                    </div>
+                    {Number(l.emi) > 0 && (
+                      <div className="text-gray-500 whitespace-nowrap">
+                        EMI <span className="font-semibold text-gray-700">{format(l.emi)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <ChevronRight size={20} className="text-gray-300" />
@@ -156,15 +145,6 @@ export default function Loans() {
                 <Label>Bank / Lender</Label>
                 <Input value={editing.bank} onChange={(e) => setEditing({ ...editing, bank: e.target.value })} placeholder="e.g., Bank of America" />
               </div>
-              <div className="grid gap-1.5">
-                <Label>Status</Label>
-                <Select value={editing.status} onValueChange={(v) => setEditing({ ...editing, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
                   <Label>Start Date</Label>
@@ -177,12 +157,12 @@ export default function Loans() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Initial Loan Amount</Label>
-                  <Input type="number" value={editing.initialAmount} onChange={(e) => setEditing({ ...editing, initialAmount: e.target.value })} placeholder="Original loan" />
-                </div>
-                <div className="grid gap-1.5">
                   <Label>Current Loan Amount</Label>
                   <Input type="number" value={editing.amount} onChange={(e) => setEditing({ ...editing, amount: e.target.value })} placeholder="Outstanding now" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Initial Loan Amount</Label>
+                  <Input type="number" value={editing.initialAmount} onChange={(e) => setEditing({ ...editing, initialAmount: e.target.value })} placeholder="Original loan" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
