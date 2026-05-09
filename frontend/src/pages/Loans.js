@@ -46,12 +46,40 @@ export default function Loans() {
     return state.loans.filter((l) => l.bank.toLowerCase().includes(q) || l.status.toLowerCase().includes(q));
   }, [search, state.loans]);
 
-  const startNew = () => { setEditing({ id: '', bank: '', status: 'ACTIVE', startDate: '', endDate: '', amount: 0, interestRate: 0, emi: 0, notes: '' }); setOpen(true); };
-  const startEdit = (l) => { setEditing(l); setOpen(true); };
+  // Loans summary: total current outstanding + total initial across active/defaulted (exclude PAID)
+  const totals = useMemo(() => {
+    let current = 0, initial = 0;
+    for (const l of state.loans) {
+      if (l.status === 'PAID') continue;
+      const cur = Number(l.amount) || 0;
+      const init = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? cur : Number(l.initialAmount) || 0;
+      current += cur;
+      initial += init;
+    }
+    return { current, initial };
+  }, [state.loans]);
+
+  const startNew = () => { setEditing({ id: '', bank: '', status: 'ACTIVE', startDate: '', endDate: '', initialAmount: 0, amount: 0, interestRate: 0, emi: 0, notes: '' }); setOpen(true); };
+  const startEdit = (l) => {
+    // Backfill initialAmount for legacy data
+    const initialAmount = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
+    setEditing({ ...l, initialAmount });
+    setOpen(true);
+  };
 
   const save = () => {
     if (!editing.bank.trim()) { toast.error('Bank name is required'); return; }
-    const item = { ...editing, id: editing.id || cryptoId(), amount: Number(editing.amount) || 0, interestRate: Number(editing.interestRate) || 0, emi: Number(editing.emi) || 0 };
+    const initialAmount = Number(editing.initialAmount) || 0;
+    const currentAmount = Number(editing.amount) || 0;
+    const item = {
+      ...editing,
+      id: editing.id || cryptoId(),
+      initialAmount,
+      // For new loans without an explicit current amount, use initial
+      amount: editing.id ? currentAmount : (currentAmount || initialAmount),
+      interestRate: Number(editing.interestRate) || 0,
+      emi: Number(editing.emi) || 0,
+    };
     upsertItem('loans', item);
     toast.success(editing.id ? 'Loan updated' : 'Loan added');
     setOpen(false); setEditing(null);
@@ -72,6 +100,19 @@ export default function Loans() {
         </button>
       </div>
 
+      {state.loans.length > 0 && (
+        <div className="mt-3 rounded-xl bg-teal-50 px-4 py-3 flex items-center justify-between">
+          <div>
+            <div className="text-[11px] uppercase font-semibold tracking-wider text-teal-700">Total Current Loan</div>
+            <div className="text-xl font-bold text-teal-700">{format(totals.current)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] uppercase font-semibold tracking-wider text-gray-500">Total Initial</div>
+            <div className="text-base font-semibold text-gray-700">{format(totals.initial)}</div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 relative">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-teal-500/40" />
@@ -81,19 +122,27 @@ export default function Loans() {
         {filtered.length === 0 && (
           <li className="py-12 text-center text-gray-400">No loans yet. Tap + to add one.</li>
         )}
-        {filtered.map((l) => (
-          <li key={l.id}>
-            <button onClick={() => startEdit(l)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
-              <LoanThumb status={l.status} />
-              <div className="flex-1 min-w-0">
-                <StatusBadge status={l.status} />
-                <div className="text-base font-bold text-gray-900 truncate">{l.bank}</div>
-                <div className="text-sm text-gray-500 truncate">{formatDateShort(l.startDate)} to {formatDateShort(l.endDate)}</div>
-              </div>
-              <ChevronRight size={20} className="text-gray-300" />
-            </button>
-          </li>
-        ))}
+        {filtered.map((l) => {
+          const initialAmount = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
+          const showSplit = Number(initialAmount) !== Number(l.amount);
+          return (
+            <li key={l.id}>
+              <button onClick={() => startEdit(l)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
+                <LoanThumb status={l.status} />
+                <div className="flex-1 min-w-0">
+                  <StatusBadge status={l.status} />
+                  <div className="text-base font-bold text-gray-900 truncate">{l.bank}</div>
+                  <div className="text-sm text-gray-500 truncate">{formatDateShort(l.startDate)} to {formatDateShort(l.endDate)}</div>
+                  <div className="text-sm mt-0.5">
+                    <span className="font-semibold text-teal-600">{format(l.amount)}</span>
+                    {showSplit && <span className="text-gray-400"> of {format(initialAmount)}</span>}
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-gray-300" />
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -126,11 +175,17 @@ export default function Loans() {
                   <Input type="date" value={editing.endDate} onChange={(e) => setEditing({ ...editing, endDate: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Amount ({format(0).replace(/[\d.,\s]/g, '').trim()})</Label>
-                  <Input type="number" value={editing.amount} onChange={(e) => setEditing({ ...editing, amount: e.target.value })} />
+                  <Label>Initial Loan Amount</Label>
+                  <Input type="number" value={editing.initialAmount} onChange={(e) => setEditing({ ...editing, initialAmount: e.target.value })} placeholder="Original loan" />
                 </div>
+                <div className="grid gap-1.5">
+                  <Label>Current Loan Amount</Label>
+                  <Input type="number" value={editing.amount} onChange={(e) => setEditing({ ...editing, amount: e.target.value })} placeholder="Outstanding now" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
                   <Label>Rate %</Label>
                   <Input type="number" step="0.01" value={editing.interestRate} onChange={(e) => setEditing({ ...editing, interestRate: e.target.value })} />

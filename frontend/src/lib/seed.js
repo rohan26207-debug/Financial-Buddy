@@ -1,13 +1,13 @@
 // Seed data shown on first launch. Cleared/changed by the user normally.
 export const seedData = {
   loans: [
-    { id: 'l1', bank: 'Bank of America', status: 'ACTIVE', startDate: '2026-05-15', endDate: '2028-05-15', amount: 25000, interestRate: 7.5, emi: 750, notes: '' },
-    { id: 'l2', bank: 'Wells Fargo', status: 'DEFAULTED', startDate: '2026-05-01', endDate: '2028-04-01', amount: 18000, interestRate: 8.2, emi: 600, notes: '' },
-    { id: 'l3', bank: 'Chase Bank', status: 'ACTIVE', startDate: '2026-06-01', endDate: '2028-05-01', amount: 32000, interestRate: 6.9, emi: 920, notes: '' },
-    { id: 'l4', bank: 'Citi Bank', status: 'DEFAULTED', startDate: '2026-04-15', endDate: '2028-03-15', amount: 12000, interestRate: 9.1, emi: 410, notes: '' },
-    { id: 'l5', bank: 'US Bank', status: 'ACTIVE', startDate: '2026-05-05', endDate: '2028-04-05', amount: 22000, interestRate: 7.0, emi: 680, notes: '' },
-    { id: 'l6', bank: 'Bank of New York Mellon', status: 'ACTIVE', startDate: '2026-03-20', endDate: '2028-02-20', amount: 40000, interestRate: 6.5, emi: 1100, notes: '' },
-    { id: 'l7', bank: 'Bank of Montreal', status: 'DEFAULTED', startDate: '2026-02-10', endDate: '2028-01-10', amount: 9500, interestRate: 9.5, emi: 320, notes: '' },
+    { id: 'l1', bank: 'Bank of America', status: 'ACTIVE', startDate: '2026-05-15', endDate: '2028-05-15', initialAmount: 25000, amount: 22500, interestRate: 7.5, emi: 750, notes: '' },
+    { id: 'l2', bank: 'Wells Fargo', status: 'DEFAULTED', startDate: '2026-05-01', endDate: '2028-04-01', initialAmount: 18000, amount: 16800, interestRate: 8.2, emi: 600, notes: '' },
+    { id: 'l3', bank: 'Chase Bank', status: 'ACTIVE', startDate: '2026-06-01', endDate: '2028-05-01', initialAmount: 32000, amount: 28500, interestRate: 6.9, emi: 920, notes: '' },
+    { id: 'l4', bank: 'Citi Bank', status: 'DEFAULTED', startDate: '2026-04-15', endDate: '2028-03-15', initialAmount: 12000, amount: 11200, interestRate: 9.1, emi: 410, notes: '' },
+    { id: 'l5', bank: 'US Bank', status: 'ACTIVE', startDate: '2026-05-05', endDate: '2028-04-05', initialAmount: 22000, amount: 19800, interestRate: 7.0, emi: 680, notes: '' },
+    { id: 'l6', bank: 'Bank of New York Mellon', status: 'ACTIVE', startDate: '2026-03-20', endDate: '2028-02-20', initialAmount: 40000, amount: 35200, interestRate: 6.5, emi: 1100, notes: '' },
+    { id: 'l7', bank: 'Bank of Montreal', status: 'DEFAULTED', startDate: '2026-02-10', endDate: '2028-01-10', initialAmount: 9500, amount: 8900, interestRate: 9.5, emi: 320, notes: '' },
   ],
   investments: [
     { id: 'i1', name: 'Stocks', type: 'Stocks', currentValue: 12000, costBasis: 10000, notes: 'Diversified equity portfolio' },
