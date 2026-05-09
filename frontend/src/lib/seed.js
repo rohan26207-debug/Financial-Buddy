@@ -1,0 +1,52 @@
+// Seed data shown on first launch. Cleared/changed by the user normally.
+export const seedData = {
+  loans: [
+    { id: 'l1', bank: 'Bank of America', status: 'ACTIVE', startDate: '2026-05-15', endDate: '2028-05-15', amount: 25000, interestRate: 7.5, emi: 750, notes: '' },
+    { id: 'l2', bank: 'Wells Fargo', status: 'DEFAULTED', startDate: '2026-05-01', endDate: '2028-04-01', amount: 18000, interestRate: 8.2, emi: 600, notes: '' },
+    { id: 'l3', bank: 'Chase Bank', status: 'ACTIVE', startDate: '2026-06-01', endDate: '2028-05-01', amount: 32000, interestRate: 6.9, emi: 920, notes: '' },
+    { id: 'l4', bank: 'Citi Bank', status: 'DEFAULTED', startDate: '2026-04-15', endDate: '2028-03-15', amount: 12000, interestRate: 9.1, emi: 410, notes: '' },
+    { id: 'l5', bank: 'US Bank', status: 'ACTIVE', startDate: '2026-05-05', endDate: '2028-04-05', amount: 22000, interestRate: 7.0, emi: 680, notes: '' },
+    { id: 'l6', bank: 'Bank of New York Mellon', status: 'ACTIVE', startDate: '2026-03-20', endDate: '2028-02-20', amount: 40000, interestRate: 6.5, emi: 1100, notes: '' },
+    { id: 'l7', bank: 'Bank of Montreal', status: 'DEFAULTED', startDate: '2026-02-10', endDate: '2028-01-10', amount: 9500, interestRate: 9.5, emi: 320, notes: '' },
+  ],
+  investments: [
+    { id: 'i1', name: 'Stocks', type: 'Stocks', currentValue: 12000, costBasis: 10000, notes: 'Diversified equity portfolio' },
+    { id: 'i2', name: 'Mutual Funds', type: 'Mutual Funds', currentValue: 5500, costBasis: 5000, notes: 'Index focused' },
+    { id: 'i3', name: 'Real Estate', type: 'Real Estate', currentValue: 220000, costBasis: 200000, notes: 'Rental property' },
+    { id: 'i4', name: 'Bonds', type: 'Bonds', currentValue: 16500, costBasis: 15000, notes: 'Government bonds' },
+    { id: 'i5', name: 'ETFs', type: 'ETFs', currentValue: 8800, costBasis: 8000, notes: 'Sector ETFs' },
+    { id: 'i6', name: 'Gold Coins', type: 'Gold', currentValue: 11000, costBasis: 10000, notes: '24K coins' },
+    { id: 'i7', name: 'SIPs', type: 'SIP', currentValue: 1100, costBasis: 1000, notes: 'Systematic plan' },
+  ],
+  reminders: [
+    { id: 'r1', title: 'Pay rent and utilities', date: '2026-06-01', note: "Make sure to pay rent on time to avoid fines", done: false },
+    { id: 'r2', title: 'Buy groceries and household essentials', date: '2026-06-05', note: "Don't forget to shop for essentials to avoid stock depletion", done: false },
+    { id: 'r3', title: 'Schedule a car maintenance checkup', date: '2026-06-12', note: 'Regular car maintenance helps prevent breakdowns and extends vehicle lifespan', done: false },
+    { id: 'r4', title: 'Take out the trash and recycling', date: '2026-06-15', note: 'Responsible waste management helps keep the community clean', done: false },
+    { id: 'r5', title: 'Pay credit card bill', date: '2026-06-20', note: 'On-time payments help maintain a good credit score', done: false },
+    { id: 'r6', title: 'Renew car insurance', date: '2026-06-25', note: 'Failing to renew car insurance can lead to legal issues', done: false },
+  ],
+  todos: [
+    { id: 't1', title: 'Pay Utility Bills', priority: 'High', due: '2026-05-10', done: false },
+    { id: 't2', title: 'Meeting with Manager', priority: 'Medium', due: '2026-05-15', done: false },
+    { id: 't3', title: 'Submit Assignment', priority: 'High', due: '2026-05-20', done: false },
+    { id: 't4', title: 'Grocery Shopping', priority: 'Low', due: '2026-05-15', done: false },
+    { id: 't5', title: 'Exercise Routine', priority: 'Medium', due: '2026-05-21', done: false },
+    { id: 't6', title: 'Tax Filing', priority: 'High', due: '2026-05-31', done: false },
+    { id: 't7', title: 'Call Best Friend', priority: 'Low', due: '2026-05-25', done: false },
+    { id: 't8', title: 'Book Appointment', priority: 'Medium', due: '2026-06-01', done: false },
+    { id: 't9', title: 'Review Budget', priority: 'High', due: '2026-06-05', done: false },
+  ],
+  calculators: [
+    // each entry stores last computed inputs/result for that calculator type
+    { id: 'c1', type: 'emi', label: 'EMI Loan', principal: 100000, rate: 8, years: 5, lastResult: null },
+    { id: 'c2', type: 'sip', label: 'Mutual Fund Returns', monthly: 5000, rate: 12, years: 3, lastResult: null },
+    { id: 'c3', type: 'emi', label: 'EMI Home Loan', principal: 5000000, rate: 7.5, years: 20, lastResult: null },
+    { id: 'c4', type: 'compound', label: 'Small Finance Scheme', principal: 10000, rate: 6, years: 1, compoundsPerYear: 4, lastResult: null },
+    { id: 'c5', type: 'simple', label: 'Microfinance Product', principal: 5000, rate: 9.5, years: 0.5, lastResult: null },
+    { id: 'c6', type: 'sip', label: 'Retirement Annuity', monthly: 3000, rate: 8, years: 25, lastResult: null },
+    { id: 'c7', type: 'emi', label: 'Personal Loan EMI', principal: 50000, rate: 11, years: 3, lastResult: null },
+    { id: 'c8', type: 'compound', label: 'Savings Account', principal: 1000, rate: 3.5, years: 1, compoundsPerYear: 12, lastResult: null },
+    { id: 'c9', type: 'emi', label: 'Business Loan', principal: 200000, rate: 10, years: 5, lastResult: null },
+  ],
+};
