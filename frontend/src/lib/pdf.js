@@ -172,13 +172,11 @@ export async function generateReportPDF({ state }) {
   const totalLoanEmi = loans.reduce((s, l) => s + (Number(l.emi) || 0), 0);
   if (loans.length > 0) {
     addSection('Loans', {
-      head: [['Bank / Lender', 'Start', 'End', 'Initial', 'Current', 'Rate %', 'EMI']],
+      head: [['Bank / Lender', 'Initial', 'Current', 'Rate %', 'EMI']],
       body: loans.map((l) => {
         const init = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
         return [
           l.bank || '',
-          fmtDate(l.startDate),
-          fmtDate(l.endDate),
           fmtNum(nf, init),
           fmtNum(nf, l.amount),
           (Number(l.interestRate) || 0).toFixed(2) + '%',
@@ -186,20 +184,20 @@ export async function generateReportPDF({ state }) {
         ];
       }),
       foot: [[
-        { content: 'Totals', colSpan: 3, styles: { halign: 'right' } },
+        { content: 'Totals', styles: { halign: 'right' } },
         fmtNum(nf, totalLoanInitial),
         fmtNum(nf, totalLoanCurrent),
         '',
         fmtNum(nf, totalLoanEmi),
       ]],
       columnStyles: {
-        3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' },
+        1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' },
       },
     });
   } else {
     addSection('Loans', {
-      head: [['Bank / Lender', 'Start', 'End', 'Initial', 'Current', 'Rate %', 'EMI']],
-      body: [[{ content: 'No loans recorded.', colSpan: 7, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
+      head: [['Bank / Lender', 'Initial', 'Current', 'Rate %', 'EMI']],
+      body: [[{ content: 'No loans recorded.', colSpan: 5, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
     });
   }
 
