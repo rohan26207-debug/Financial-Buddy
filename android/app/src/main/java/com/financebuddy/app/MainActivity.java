@@ -63,10 +63,46 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    /**
+     * Mobile-app-style back navigation:
+     *   - If the user is on the home tab (Investments) -> exit the app.
+     *   - Otherwise -> jump to Investments and clear the WebView history
+     *     so the next back press exits cleanly (no in-app history walking).
+     */
+    private void goHomeOrExitApp() {
+        if (webView == null) {
+            finish();
+            return;
+        }
+        String url = webView.getUrl();
+        boolean atHome = url == null
+                || !url.contains("#")
+                || url.endsWith("#/")
+                || url.endsWith("#/investments");
+
+        if (atHome) {
+            finish();
+            return;
+        }
+
+        webView.evaluateJavascript(
+                "window.location.hash = '#/investments';", null);
+        // Clear back/forward history once the SPA has navigated, so a
+        // subsequent back press exits the app instead of cycling tabs.
+        webView.postDelayed(() -> {
+            if (webView != null) webView.clearHistory();
+        }, 250);
+    }
+
+    @Override
+    public void onBackPressed() {
+        goHomeOrExitApp();
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView != null && webView.canGoBack()) {
-            webView.goBack();
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            goHomeOrExitApp();
             return true;
         }
         return super.onKeyDown(keyCode, event);

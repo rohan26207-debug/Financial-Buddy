@@ -24,6 +24,7 @@ Subsequent iterations:
 - Rent/Income tracking page.
 - `Dialog` 3-section flex layout to keep buttons visible above mobile keyboard.
 - Android assets pipeline (`scripts/build-android-assets.sh`).
+- Android back-button UX fix (Feb 9, 2026): pressing back on home (Investments) exits the app; on any other screen jumps to Investments and clears WebView history so the next back press exits cleanly. Replaces the previous `webView.canGoBack()` loop that trapped users in hash-history.
 - Selective code-review fixes (Feb 9, 2026):
   - `useMemo` for store context value.
   - `useMemo`/`useCallback` for outlet context in `Layout.js`.
