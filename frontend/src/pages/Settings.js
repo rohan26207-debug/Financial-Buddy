@@ -1,11 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Menu, Download, Upload, RefreshCw, Globe, Info, Wallet, Database, ChevronRight } from 'lucide-react';
+import { Download, Upload, RefreshCw, Globe, Info, Wallet, Database, ChevronRight, User, Phone, Mail, MapPin, Lock, ShieldAlert } from 'lucide-react';
 import { useStore, CURRENCIES } from '../lib/store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Button } from '../components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../components/ui/dialog';
+import PageTopBar from '../components/PageTopBar';
 import { toast } from 'sonner';
+
+const RESET_PASSWORD = '123456';
 
 function Section({ title, children }) {
   return (
@@ -34,10 +40,18 @@ function Row({ icon: Icon, title, subtitle, right, onClick, danger }) {
 }
 
 export default function Settings() {
-  const { openDrawer } = useOutletContext();
-  const { state, updateSettings, exportData, importData, resetData } = useStore();
+  const { state, updateSettings, updateContact, exportData, importData, resetData } = useStore();
   const fileInputRef = useRef(null);
-  const [importing, setImporting] = useState(false);
+
+  // Contact form local state, synced from store
+  const contact = state.contact || { name: '', phone: '', email: '', address: '' };
+  const setContact = (patch) => updateContact(patch);
+
+  // Reset confirmation state
+  const [resetOpen, setResetOpen] = useState(false);
+  const [confirmCheck, setConfirmCheck] = useState(false);
+  const [pwd, setPwd] = useState('');
+  const canReset = confirmCheck && pwd === RESET_PASSWORD;
 
   const counts = {
     loans: state.loans.length,
@@ -75,27 +89,22 @@ export default function Settings() {
     }
   };
 
-  const onImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const onImportClick = () => fileInputRef.current?.click();
 
   const onFileChosen = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    setImporting(true);
     try {
       const text = await file.text();
       importData(text);
       toast.success('Backup imported');
     } catch (err) {
       toast.error('Invalid backup file');
-    } finally {
-      setImporting(false);
     }
   };
 
-  const onPasteImport = async () => {
+  const onPasteImport = () => {
     try {
       const text = window.prompt('Paste backup JSON here');
       if (!text) return;
@@ -106,16 +115,22 @@ export default function Settings() {
     }
   };
 
-  const onReset = () => {
+  const openReset = () => {
+    setConfirmCheck(false);
+    setPwd('');
+    setResetOpen(true);
+  };
+
+  const onConfirmReset = () => {
+    if (!canReset) return;
     resetData();
-    toast.success('All data reset to defaults');
+    toast.success('All data reset to empty');
+    setResetOpen(false);
   };
 
   return (
     <div className="px-5 pt-4">
-      <div className="flex items-center justify-between">
-        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
-      </div>
+      <PageTopBar />
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">Settings</h1>
 
       <Section title="Preferences">
@@ -133,6 +148,30 @@ export default function Settings() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </Section>
+
+      <Section title="Contact Info">
+        <div className="px-4 py-3 grid gap-3">
+          <div className="grid gap-1.5">
+            <Label className="text-xs flex items-center gap-1.5 text-gray-500"><User size={12} /> Name</Label>
+            <Input value={contact.name} onChange={(e) => setContact({ name: e.target.value })} placeholder="Your full name" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label className="text-xs flex items-center gap-1.5 text-gray-500"><Phone size={12} /> Phone</Label>
+              <Input value={contact.phone} onChange={(e) => setContact({ phone: e.target.value })} placeholder="+1 555 0100" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs flex items-center gap-1.5 text-gray-500"><Mail size={12} /> Email</Label>
+              <Input type="email" value={contact.email} onChange={(e) => setContact({ email: e.target.value })} placeholder="you@example.com" />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs flex items-center gap-1.5 text-gray-500"><MapPin size={12} /> Address</Label>
+            <Textarea rows={2} value={contact.address} onChange={(e) => setContact({ address: e.target.value })} placeholder="Street, City, Postal code" />
+          </div>
+          <p className="text-[11px] text-gray-400">Your info is saved on this device only — nothing is sent anywhere.</p>
         </div>
       </Section>
 
@@ -156,28 +195,13 @@ export default function Settings() {
       </Section>
 
       <Section title="Danger Zone">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button className="tap-row w-full flex items-center gap-3 px-4 py-3 text-left">
-              <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><RefreshCw size={18} /></div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-rose-600">Reset All Data</div>
-                <div className="text-xs text-gray-500">Restores demo seed data</div>
-              </div>
-              <ChevronRight size={18} className="text-gray-300" />
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-[90vw] sm:max-w-md rounded-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reset all data?</AlertDialogTitle>
-              <AlertDialogDescription>This will erase all your loans, investments, reminders, tasks, and calculators, and replace them with the default demo data. This cannot be undone.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onReset} className="bg-rose-600 hover:bg-rose-700">Reset</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Row
+          icon={RefreshCw}
+          title="Reset All Data"
+          subtitle="Erase everything; replace with empty data"
+          onClick={openReset}
+          danger
+        />
       </Section>
 
       <Section title="About">
@@ -191,6 +215,64 @@ export default function Settings() {
       </Section>
 
       <div className="mt-6 mb-4 text-center text-[11px] text-gray-400">All your data stays on this device.</div>
+
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert size={18} className="text-rose-600" />
+              Reset All Data
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="grid gap-4">
+              <p className="text-sm text-gray-600">
+                This will permanently erase every loan, investment, reminder, task, calculator and contact info on this device. The app will start with a clean, empty state.
+              </p>
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <Checkbox
+                  checked={confirmCheck}
+                  onCheckedChange={(v) => setConfirmCheck(!!v)}
+                  className="mt-0.5"
+                />
+                <span className="text-sm text-gray-700">
+                  I understand all my data will be permanently erased and cannot be recovered.
+                </span>
+              </label>
+              <div className="grid gap-1.5">
+                <Label className="text-xs flex items-center gap-1.5 text-gray-500">
+                  <Lock size={12} /> Enter password to confirm
+                </Label>
+                <Input
+                  type="password"
+                  value={pwd}
+                  onChange={(e) => setPwd(e.target.value)}
+                  placeholder="Password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                <p className="text-[11px] text-gray-400">Required to enable the Reset button.</p>
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onConfirmReset}
+              disabled={!canReset}
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 disabled:hover:bg-rose-600"
+            >
+              Reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

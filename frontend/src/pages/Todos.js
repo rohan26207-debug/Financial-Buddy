@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import PageTopBar from '../components/PageTopBar';
 import { toast } from 'sonner';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
@@ -46,9 +47,7 @@ export default function Todos() {
 
   return (
     <div className="px-5 pt-4">
-      <div className="flex items-center justify-between">
-        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
-      </div>
+      <PageTopBar />
       <div className="flex items-center justify-between mt-2">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Daily Tasks</h1>
         <button onClick={startNew} className="w-11 h-11 rounded-full bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white flex items-center justify-center shadow-md transition-colors">

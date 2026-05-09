@@ -3,16 +3,30 @@ import { seedData } from './seed';
 
 const STORAGE_KEY = 'finance_buddy_data_v1';
 
+// Empty state used by Reset All Data and as the baseline.
+const emptyState = {
+  loans: [],
+  investments: [],
+  reminders: [],
+  todos: [],
+  calculators: [],
+  contact: { name: '', phone: '', email: '', address: '' },
+  settings: {
+    currency: 'USD',
+    locale: 'en-US',
+    theme: 'light',
+    zoom: 1,
+  },
+};
+
+// First-launch state (with seed demo data so the app feels alive on first open).
 const defaultState = {
+  ...emptyState,
   loans: seedData.loans,
   investments: seedData.investments,
   reminders: seedData.reminders,
   todos: seedData.todos,
   calculators: seedData.calculators,
-  settings: {
-    currency: 'USD',
-    locale: 'en-US',
-  },
 };
 
 function loadState() {
@@ -20,7 +34,12 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
-    return { ...defaultState, ...parsed, settings: { ...defaultState.settings, ...(parsed.settings || {}) } };
+    return {
+      ...defaultState,
+      ...parsed,
+      contact: { ...emptyState.contact, ...(parsed.contact || {}) },
+      settings: { ...defaultState.settings, ...(parsed.settings || {}) },
+    };
   } catch (e) {
     return defaultState;
   }
@@ -72,11 +91,29 @@ export function StoreProvider({ children }) {
   }, []);
 
   const resetData = useCallback(() => {
-    setState(defaultState);
+    setState(emptyState);
   }, []);
 
+  const updateContact = useCallback((patch) => {
+    setState((prev) => ({ ...prev, contact: { ...(prev.contact || {}), ...patch } }));
+  }, []);
+
+  // Apply theme and zoom to the document
+  useEffect(() => {
+    const theme = state.settings?.theme || 'light';
+    const root = document.documentElement;
+    if (theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+  }, [state.settings?.theme]);
+
+  useEffect(() => {
+    const zoom = Number(state.settings?.zoom) || 1;
+    const clamped = Math.min(1.5, Math.max(0.75, zoom));
+    document.documentElement.style.fontSize = (clamped * 16) + 'px';
+  }, [state.settings?.zoom]);
+
   return (
-    <StoreContext.Provider value={{ state, updateSection, upsertItem, removeItem, updateSettings, exportData, importData, resetData }}>
+    <StoreContext.Provider value={{ state, updateSection, upsertItem, removeItem, updateSettings, updateContact, exportData, importData, resetData }}>
       {children}
     </StoreContext.Provider>
   );

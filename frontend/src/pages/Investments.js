@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import PageTopBar from '../components/PageTopBar';
 import { toast } from 'sonner';
 
 const TYPES = ['Stocks', 'Mutual Funds', 'Bank Account', 'Real Estate', 'Bonds', 'ETFs', 'Gold', 'SIP', 'Crypto', 'Other'];
@@ -64,9 +65,7 @@ export default function Investments() {
 
   return (
     <div className="px-5 pt-4">
-      <div className="flex items-center justify-between">
-        <button onClick={openDrawer} className="p-2 -ml-2 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200"><Menu size={22} /></button>
-      </div>
+      <PageTopBar />
 
       <div className="flex items-center justify-between mt-2">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Investments</h1>
