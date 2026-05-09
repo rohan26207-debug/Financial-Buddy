@@ -1,12 +1,15 @@
 // PDF report generation for Finance Buddy.
-// Generates a tabular report containing Investments, Rent / Income, and Loans only.
+// Generates a black & white tabular report containing Investments,
+// Rent / Income, and Loans only. No currency symbols are emitted because
+// the default jsPDF Helvetica font does not render most non-ASCII glyphs.
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const PRIMARY = [13, 148, 136]; // teal-600
-const TEXT_DARK = [17, 24, 39];
-const TEXT_GRAY = [107, 114, 128];
+const BLACK = [0, 0, 0];
+const GRAY_DARK = [60, 60, 60];
+const GRAY_MID = [120, 120, 120];
+const GRAY_LIGHT = [220, 220, 220];
 
 function fmtDate(s) {
   if (!s) return '';
@@ -14,45 +17,58 @@ function fmtDate(s) {
   catch { return ''; }
 }
 
-function fmtMoney(formatter, n) {
-  return formatter(Number(n) || 0);
+// Plain number formatter: locale-grouped digits, two decimals, no currency.
+function makeNumberFormatter(locale = 'en-US') {
+  try {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch {
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 }
 
-export async function generateReportPDF({ state, currencyFormatter }) {
+function fmtNum(formatter, n) {
+  return formatter.format(Number(n) || 0);
+}
+
+export async function generateReportPDF({ state }) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 36;
 
-  // ---- Header ----
-  doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pageWidth, 70, 'F');
-  doc.setTextColor(255, 255, 255);
+  const locale = state.settings?.locale || 'en-US';
+  const nf = makeNumberFormatter(locale);
+
+  // ---- Header (B&W) ----
+  doc.setTextColor(...BLACK);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
-  doc.text('Finance Buddy', margin, 36);
+  doc.text('Finance Buddy', margin, 40);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text('Investments, Rent / Income & Loans Report', margin, 56);
+  doc.setTextColor(...GRAY_DARK);
+  doc.text('Investments, Rent / Income & Loans Report', margin, 58);
 
-  // Generated date / contact
-  doc.setTextColor(...TEXT_GRAY);
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.6);
+  doc.line(margin, 70, pageWidth - margin, 70);
+
+  doc.setTextColor(...GRAY_MID);
   doc.setFontSize(9);
   const now = new Date();
-  const meta = 'Generated on ' + now.toLocaleString();
-  doc.text(meta, pageWidth - margin, 90, { align: 'right' });
+  doc.text('Generated on ' + now.toLocaleString(), pageWidth - margin, 86, { align: 'right' });
 
   const contact = state.contact || {};
   if (contact.name || contact.email || contact.phone) {
-    let line = [contact.name, contact.email, contact.phone].filter(Boolean).join(' \u2022 ');
-    doc.text(line, margin, 90);
+    const line = [contact.name, contact.email, contact.phone].filter(Boolean).join(' \u2022 ');
+    doc.text(line, margin, 86);
   }
 
-  let cursorY = 110;
+  let cursorY = 108;
 
-  // ---- Section helper ----
+  // ---- Section helper (B&W theme) ----
   const addSection = (title, tableConfig) => {
     if (cursorY > 720) { doc.addPage(); cursorY = 60; }
-    doc.setTextColor(...TEXT_DARK);
+    doc.setTextColor(...BLACK);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.text(title, margin, cursorY);
@@ -60,9 +76,29 @@ export async function generateReportPDF({ state, currencyFormatter }) {
     autoTable(doc, {
       startY: cursorY,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 6, lineColor: [229, 231, 235], lineWidth: 0.5, textColor: TEXT_DARK },
-      headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+        lineColor: BLACK,
+        lineWidth: 0.4,
+        textColor: BLACK,
+        fillColor: [255, 255, 255],
+      },
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: BLACK,
+        fontStyle: 'bold',
+        lineColor: BLACK,
+        lineWidth: 0.6,
+      },
+      footStyles: {
+        fillColor: [255, 255, 255],
+        textColor: BLACK,
+        fontStyle: 'bold',
+        lineColor: BLACK,
+        lineWidth: 0.6,
+      },
       ...tableConfig,
     });
     cursorY = doc.lastAutoTable.finalY + 24;
@@ -79,23 +115,25 @@ export async function generateReportPDF({ state, currencyFormatter }) {
       body: investments.map((i) => [
         i.name || '',
         i.type || '',
-        fmtMoney(currencyFormatter, i.costBasis),
-        fmtMoney(currencyFormatter, i.currentValue),
-        fmtMoney(currencyFormatter, (Number(i.currentValue) || 0) - (Number(i.costBasis) || 0)),
+        fmtNum(nf, i.costBasis),
+        fmtNum(nf, i.currentValue),
+        fmtNum(nf, (Number(i.currentValue) || 0) - (Number(i.costBasis) || 0)),
       ]),
       foot: [[
-        { content: 'Totals', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: fmtMoney(currencyFormatter, totalCost), styles: { fontStyle: 'bold' } },
-        { content: fmtMoney(currencyFormatter, totalCurrent), styles: { fontStyle: 'bold' } },
-        { content: fmtMoney(currencyFormatter, totalGain), styles: { fontStyle: 'bold', textColor: totalGain >= 0 ? [22, 163, 74] : [220, 38, 38] } },
+        { content: 'Totals', colSpan: 2, styles: { halign: 'right' } },
+        fmtNum(nf, totalCost),
+        fmtNum(nf, totalCurrent),
+        fmtNum(nf, totalGain),
       ]],
-      footStyles: { fillColor: [240, 253, 250], textColor: TEXT_DARK },
       columnStyles: {
         2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' },
       },
     });
   } else {
-    addSection('Investments', { head: [['Name', 'Type', 'Cost Basis', 'Current Value', 'Gain / Loss']], body: [[{ content: 'No investments recorded.', colSpan: 5, styles: { halign: 'center', textColor: TEXT_GRAY, fontStyle: 'italic' } }]] });
+    addSection('Investments', {
+      head: [['Name', 'Type', 'Cost Basis', 'Current Value', 'Gain / Loss']],
+      body: [[{ content: 'No investments recorded.', colSpan: 5, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
+    });
   }
 
   // ---- Rent / Income ----
@@ -107,19 +145,21 @@ export async function generateReportPDF({ state, currencyFormatter }) {
       body: incomes.map((it) => [
         it.name || '',
         fmtDate(it.date),
-        fmtMoney(currencyFormatter, it.amount),
+        fmtNum(nf, it.amount),
         it.description || '',
       ]),
       foot: [[
-        { content: 'Total Monthly Rent / Income', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: fmtMoney(currencyFormatter, totalIncome), styles: { fontStyle: 'bold' } },
+        { content: 'Total Monthly Rent / Income', colSpan: 2, styles: { halign: 'right' } },
+        fmtNum(nf, totalIncome),
         '',
       ]],
-      footStyles: { fillColor: [240, 253, 250], textColor: TEXT_DARK },
       columnStyles: { 2: { halign: 'right' } },
     });
   } else {
-    addSection('Rent / Income', { head: [['Name', 'Date', 'Amount', 'Description']], body: [[{ content: 'No rent or income entries recorded.', colSpan: 4, styles: { halign: 'center', textColor: TEXT_GRAY, fontStyle: 'italic' } }]] });
+    addSection('Rent / Income', {
+      head: [['Name', 'Date', 'Amount', 'Description']],
+      body: [[{ content: 'No rent or income entries recorded.', colSpan: 4, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
+    });
   }
 
   // ---- Loans ----
@@ -139,26 +179,28 @@ export async function generateReportPDF({ state, currencyFormatter }) {
           l.bank || '',
           fmtDate(l.startDate),
           fmtDate(l.endDate),
-          fmtMoney(currencyFormatter, init),
-          fmtMoney(currencyFormatter, l.amount),
+          fmtNum(nf, init),
+          fmtNum(nf, l.amount),
           (Number(l.interestRate) || 0).toFixed(2) + '%',
-          fmtMoney(currencyFormatter, l.emi),
+          fmtNum(nf, l.emi),
         ];
       }),
       foot: [[
-        { content: 'Totals', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: fmtMoney(currencyFormatter, totalLoanInitial), styles: { fontStyle: 'bold' } },
-        { content: fmtMoney(currencyFormatter, totalLoanCurrent), styles: { fontStyle: 'bold' } },
+        { content: 'Totals', colSpan: 3, styles: { halign: 'right' } },
+        fmtNum(nf, totalLoanInitial),
+        fmtNum(nf, totalLoanCurrent),
         '',
-        { content: fmtMoney(currencyFormatter, totalLoanEmi), styles: { fontStyle: 'bold' } },
+        fmtNum(nf, totalLoanEmi),
       ]],
-      footStyles: { fillColor: [240, 253, 250], textColor: TEXT_DARK },
       columnStyles: {
         3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' },
       },
     });
   } else {
-    addSection('Loans', { head: [['Bank / Lender', 'Start', 'End', 'Initial', 'Current', 'Rate %', 'EMI']], body: [[{ content: 'No loans recorded.', colSpan: 7, styles: { halign: 'center', textColor: TEXT_GRAY, fontStyle: 'italic' } }]] });
+    addSection('Loans', {
+      head: [['Bank / Lender', 'Start', 'End', 'Initial', 'Current', 'Rate %', 'EMI']],
+      body: [[{ content: 'No loans recorded.', colSpan: 7, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
+    });
   }
 
   // ---- Footer on every page ----
@@ -167,23 +209,26 @@ export async function generateReportPDF({ state, currencyFormatter }) {
     doc.setPage(p);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...TEXT_GRAY);
+    doc.setTextColor(...GRAY_MID);
+    doc.setDrawColor(...GRAY_LIGHT);
+    doc.setLineWidth(0.3);
     const ph = doc.internal.pageSize.getHeight();
-    doc.text('Finance Buddy \u2022 Offline-first PWA', margin, ph - 18);
-    doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, ph - 18, { align: 'right' });
+    doc.line(margin, ph - 28, pageWidth - margin, ph - 28);
+    doc.text('Finance Buddy \u2022 Offline-first PWA', margin, ph - 16);
+    doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, ph - 16, { align: 'right' });
   }
 
   return doc;
 }
 
-export async function downloadReportPDF({ state, currencyFormatter }) {
-  const doc = await generateReportPDF({ state, currencyFormatter });
+export async function downloadReportPDF({ state }) {
+  const doc = await generateReportPDF({ state });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   doc.save(`finance-buddy-report-${stamp}.pdf`);
   return doc;
 }
 
-export async function getReportPDFBlob({ state, currencyFormatter }) {
-  const doc = await generateReportPDF({ state, currencyFormatter });
+export async function getReportPDFBlob({ state }) {
+  const doc = await generateReportPDF({ state });
   return doc.output('blob');
 }

@@ -40,13 +40,11 @@ export default function CalculatorDetail() {
 
   const onSave = () => {
     upsertItem('calculators', data);
-    toast.success('Saved');
     navigate('/calculators');
   };
 
   const onDelete = () => {
     removeItem('calculators', data.id);
-    toast.success('Deleted');
     navigate('/calculators');
   };
 

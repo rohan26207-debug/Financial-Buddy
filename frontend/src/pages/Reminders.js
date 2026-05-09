@@ -33,14 +33,13 @@ export default function Reminders() {
   };
 
   const save = () => {
-    if (!editing.title.trim()) { toast.error('Title is required'); return; }
+    if (!editing.title.trim()) return;
     const item = { ...editing, id: editing.id || cryptoId() };
     upsertItem('reminders', item);
-    toast.success(editing.id ? 'Reminder updated' : 'Reminder added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id) => { removeItem('reminders', id); toast.success('Reminder deleted'); setOpen(false); setEditing(null); };
+  const del = (id) => { removeItem('reminders', id); setOpen(false); setEditing(null); };
 
   return (
     <div className="px-5 pt-4">

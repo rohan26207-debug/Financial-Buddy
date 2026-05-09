@@ -54,14 +54,13 @@ export default function Investments() {
   const startEdit = (i) => { setEditing(i); setOpen(true); };
 
   const save = () => {
-    if (!editing.name.trim()) { toast.error('Name is required'); return; }
+    if (!editing.name.trim()) return;
     const item = { ...editing, id: editing.id || cryptoId(), currentValue: Number(editing.currentValue) || 0, costBasis: Number(editing.costBasis) || 0 };
     upsertItem('investments', item);
-    toast.success(editing.id ? 'Investment updated' : 'Investment added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id) => { removeItem('investments', id); toast.success('Investment deleted'); setOpen(false); setEditing(null); };
+  const del = (id) => { removeItem('investments', id); setOpen(false); setEditing(null); };
 
   return (
     <div className="px-5 pt-4">

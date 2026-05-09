@@ -42,13 +42,12 @@ export default function Income() {
   const startEdit = (it) => { setEditing(it); setOpen(true); };
 
   const save = () => {
-    if (!editing.name.trim()) { toast.error('Name is required'); return; }
+    if (!editing.name.trim()) return;
     upsertItem('incomes', { ...editing, id: editing.id || cryptoId(), amount: Number(editing.amount) || 0 });
-    toast.success(editing.id ? 'Income updated' : 'Income added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id) => { removeItem('incomes', id); toast.success('Income deleted'); setOpen(false); setEditing(null); };
+  const del = (id) => { removeItem('incomes', id); setOpen(false); setEditing(null); };
 
   return (
     <div className="px-5 pt-4">

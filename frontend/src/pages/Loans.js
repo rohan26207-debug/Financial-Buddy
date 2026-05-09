@@ -53,7 +53,7 @@ export default function Loans() {
   };
 
   const save = () => {
-    if (!editing.bank.trim()) { toast.error('Bank name is required'); return; }
+    if (!editing.bank.trim()) return;
     const initialAmount = Number(editing.initialAmount) || 0;
     const currentAmount = Number(editing.amount) || 0;
     const item = {
@@ -65,11 +65,10 @@ export default function Loans() {
       emi: Number(editing.emi) || 0,
     };
     upsertItem('loans', item);
-    toast.success(editing.id ? 'Loan updated' : 'Loan added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id) => { removeItem('loans', id); toast.success('Loan deleted'); setOpen(false); setEditing(null); };
+  const del = (id) => { removeItem('loans', id); setOpen(false); setEditing(null); };
 
   return (
     <div className="px-5 pt-4">

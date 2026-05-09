@@ -37,13 +37,12 @@ export default function Todos() {
   const toggleDone = (e, t) => { e.stopPropagation(); upsertItem('todos', { ...t, done: !t.done }); };
 
   const save = () => {
-    if (!editing.title.trim()) { toast.error('Title is required'); return; }
+    if (!editing.title.trim()) return;
     upsertItem('todos', { ...editing, id: editing.id || cryptoId() });
-    toast.success(editing.id ? 'Task updated' : 'Task added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id) => { removeItem('todos', id); toast.success('Task deleted'); setOpen(false); setEditing(null); };
+  const del = (id) => { removeItem('todos', id); setOpen(false); setEditing(null); };
 
   return (
     <div className="px-5 pt-4">

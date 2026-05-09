@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Menu, ZoomIn, ZoomOut, Sun, Moon, Share2, FileText, Loader2 } from 'lucide-react';
-import { useStore, useCurrency } from '../lib/store';
+import { useStore } from '../lib/store';
 import { downloadReportPDF, getReportPDFBlob } from '../lib/pdf';
-import { toast } from 'sonner';
 
 export default function PageTopBar() {
   const { openDrawer } = useOutletContext() || {};
   const { state, updateSettings, exportData, markBackedUp } = useStore();
-  const { format } = useCurrency();
   const theme = state.settings?.theme || 'light';
   const zoom = Number(state.settings?.zoom) || 1;
   const [busy, setBusy] = useState(null); // 'pdf' | 'share' | null
@@ -22,12 +20,10 @@ export default function PageTopBar() {
     if (busy) return;
     setBusy('pdf');
     try {
-      await downloadReportPDF({ state, currencyFormatter: format });
+      await downloadReportPDF({ state });
       markBackedUp();
-      toast.success('PDF report downloaded');
     } catch (e) {
       console.error(e);
-      toast.error('Could not generate PDF');
     } finally {
       setBusy(null);
     }
@@ -39,13 +35,9 @@ export default function PageTopBar() {
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-      // Prefer file share (Web Share API level 2). Try a PDF report first,
-      // since that's the most useful artefact to share. Fall back to JSON
-      // backup file, then text share, then clipboard.
-      let pdfBlob = null;
       let pdfFile = null;
       try {
-        pdfBlob = await getReportPDFBlob({ state, currencyFormatter: format });
+        const pdfBlob = await getReportPDFBlob({ state });
         pdfFile = new File([pdfBlob], `finance-buddy-report-${stamp}.pdf`, { type: 'application/pdf' });
       } catch {}
 
@@ -63,7 +55,6 @@ export default function PageTopBar() {
           files: tryFiles,
         });
         markBackedUp();
-        toast.success('Shared');
         return;
       }
       if (navigator.share) {
@@ -72,17 +63,13 @@ export default function PageTopBar() {
           text: jsonText.length < 1500 ? jsonText : 'Finance Buddy backup (open the app to export full data).',
         });
         markBackedUp();
-        toast.success('Shared');
         return;
       }
-      // Fallback: copy JSON to clipboard
-      await navigator.clipboard.writeText(jsonText);
-      markBackedUp();
-      toast.success('Backup copied to clipboard');
+      // Silent clipboard fallback
+      try { await navigator.clipboard.writeText(jsonText); markBackedUp(); } catch {}
     } catch (e) {
-      if (e && e.name === 'AbortError') return; // user cancelled the share sheet
+      if (e && e.name === 'AbortError') return;
       console.error(e);
-      toast.error('Could not share');
     } finally {
       setBusy(null);
     }

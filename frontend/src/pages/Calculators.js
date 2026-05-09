@@ -59,13 +59,12 @@ export default function Calculators() {
   const startNew = () => { setEditing({ id: '', type: 'emi', label: '', principal: 10000, rate: 8, years: 5, monthly: 1000, initial: 1000000, compoundsPerYear: 12 }); setOpen(true); };
 
   const save = () => {
-    if (!editing.label.trim()) { toast.error('Label is required'); return; }
+    if (!editing.label.trim()) return;
     upsertItem('calculators', { ...editing, id: editing.id || cryptoId() });
-    toast.success('Calculator added');
     setOpen(false); setEditing(null);
   };
 
-  const del = (id, e) => { e.stopPropagation(); removeItem('calculators', id); toast.success('Calculator removed'); };
+  const del = (id, e) => { e.stopPropagation(); removeItem('calculators', id); };
 
   return (
     <div className="px-5 pt-4">
