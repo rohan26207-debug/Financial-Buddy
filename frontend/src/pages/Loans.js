@@ -112,7 +112,6 @@ export default function Loans() {
                 <LoanThumb />
                 <div className="flex-1 min-w-0">
                   <div className="text-base font-bold text-gray-900 truncate">{l.bank}</div>
-                  <div className="text-sm text-gray-500 truncate">{formatDateShort(l.startDate)} to {formatDateShort(l.endDate)}</div>
                   <div className="text-sm mt-0.5 flex items-center justify-between gap-2">
                     <div className="min-w-0 truncate">
                       <span className="font-semibold text-teal-600">{format(l.amount)}</span>
@@ -143,16 +142,6 @@ export default function Loans() {
               <div className="grid gap-1.5">
                 <Label>Bank / Lender</Label>
                 <Input value={editing.bank} onChange={(e) => setEditing({ ...editing, bank: e.target.value })} placeholder="e.g., Bank of America" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Start Date</Label>
-                  <Input type="date" value={editing.startDate} onChange={(e) => setEditing({ ...editing, startDate: e.target.value })} />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>End Date</Label>
-                  <Input type="date" value={editing.endDate} onChange={(e) => setEditing({ ...editing, endDate: e.target.value })} />
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
