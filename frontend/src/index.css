@@ -55,3 +55,11 @@ code {
 
 /* Status badge */
 .status-badge { letter-spacing: 0.08em; font-size: 11px; font-weight: 700; }
+
+/* Ensure form inputs aren't auto-scrolled behind the sticky dialog header
+   when they're focused (browser uses scroll-into-view when a field gets focus
+   or the soft keyboard appears). */
+input, textarea, select, [role="combobox"] {
+  scroll-margin-top: 88px;
+  scroll-margin-bottom: 88px;
+}

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Plus, Search, Menu, ChevronRight, Trash2, Check } from 'lucide-react';
 import { useStore, formatDateShort, cryptoId } from '../lib/store';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
@@ -102,6 +102,7 @@ export default function Todos() {
           <DialogHeader>
             <DialogTitle>{editing?.id ? 'Edit Task' : 'Add Task'}</DialogTitle>
           </DialogHeader>
+          <DialogBody>
           {editing && (
             <div className="grid gap-3">
               <div className="grid gap-1.5">
@@ -123,6 +124,7 @@ export default function Todos() {
               </div>
             </div>
           )}
+          </DialogBody>
           <DialogFooter className="gap-2 sm:gap-2">
             {editing?.id && (
               <Button variant="outline" onClick={() => del(editing.id)} className="text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>

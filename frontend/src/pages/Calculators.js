@@ -3,7 +3,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Search, Menu, ChevronRight, Plus, Calculator as CalcIcon, Home, Building, PiggyBank, Briefcase, Sprout, Coins, BarChart3, Trash2 } from 'lucide-react';
 import { useStore, useCurrency, cryptoId } from '../lib/store';
 import { calculatorPrimary } from '../lib/calc';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
@@ -106,6 +106,7 @@ export default function Calculators() {
           <DialogHeader>
             <DialogTitle>Add Calculator</DialogTitle>
           </DialogHeader>
+          <DialogBody>
           {editing && (
             <div className="grid gap-3">
               <div className="grid gap-1.5">
@@ -122,6 +123,7 @@ export default function Calculators() {
               <p className="text-xs text-gray-500">You can fine-tune all values inside the calculator after creating it.</p>
             </div>
           )}
+          </DialogBody>
           <DialogFooter>
             <Button onClick={save} className="bg-teal-600 hover:bg-teal-700">Add</Button>
           </DialogFooter>
