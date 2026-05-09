@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Banknote, DollarSign, Clock, ListChecks, Calculator, HandCoins } from 'lucide-react';
 import AppDrawer from './AppDrawer';
@@ -17,10 +17,13 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const onDetail = location.pathname.startsWith('/calculators/') && location.pathname !== '/calculators';
 
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const outletContext = useMemo(() => ({ openDrawer }), [openDrawer]);
+
   return (
     <div className="app-shell flex flex-col">
       <main className="flex-1 pb-20">
-        <Outlet context={{ openDrawer: () => setDrawerOpen(true) }} />
+        <Outlet context={outletContext} />
       </main>
 
       <AppDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />

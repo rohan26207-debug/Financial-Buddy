@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { seedData } from './seed';
 
 const STORAGE_KEY = 'finance_buddy_data_v1';
@@ -46,6 +46,7 @@ function loadState() {
       settings: { ...defaultState.settings, ...(parsed.settings || {}) },
     };
   } catch (e) {
+    console.warn('finance-buddy: failed to parse stored state, using defaults', e);
     return defaultState;
   }
 }
@@ -53,7 +54,11 @@ function loadState() {
 function saveState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {}
+  } catch (e) {
+    // localStorage may be full or unavailable (e.g. private mode);
+    // we intentionally do not surface UI popups for this.
+    console.warn('finance-buddy: failed to persist state', e);
+  }
 }
 
 const StoreContext = createContext(null);
@@ -124,8 +129,13 @@ export function StoreProvider({ children }) {
     document.documentElement.style.fontSize = (clamped * 16) + 'px';
   }, [state.settings?.zoom]);
 
+  const value = useMemo(
+    () => ({ state, updateSection, upsertItem, removeItem, updateSettings, updateContact, markBackedUp, exportData, importData, resetData }),
+    [state, updateSection, upsertItem, removeItem, updateSettings, updateContact, markBackedUp, exportData, importData, resetData]
+  );
+
   return (
-    <StoreContext.Provider value={{ state, updateSection, upsertItem, removeItem, updateSettings, updateContact, markBackedUp, exportData, importData, resetData }}>
+    <StoreContext.Provider value={value}>
       {children}
     </StoreContext.Provider>
   );
@@ -167,7 +177,8 @@ export function useCurrency() {
     const n = Number(val) || 0;
     try {
       return new Intl.NumberFormat(cur.locale, { style: 'currency', currency: cur.code, maximumFractionDigits: opts.decimals ?? 2, minimumFractionDigits: opts.decimals ?? 2 }).format(n);
-    } catch {
+    } catch (e) {
+      // Intl can throw on unsupported locales/currencies; fall back to plain symbol prefix.
       return cur.symbol + n.toFixed(opts.decimals ?? 2);
     }
   };
@@ -175,7 +186,8 @@ export function useCurrency() {
     const n = Number(val) || 0;
     try {
       return new Intl.NumberFormat(cur.locale, { maximumFractionDigits: opts.decimals ?? 2, minimumFractionDigits: opts.decimals ?? 2 }).format(n);
-    } catch {
+    } catch (e) {
+      // Intl can throw on unsupported locales; fall back to fixed-point string.
       return n.toFixed(opts.decimals ?? 2);
     }
   };
@@ -187,7 +199,10 @@ export function formatDate(d) {
   try {
     const dt = typeof d === 'string' ? new Date(d) : d;
     return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch { return ''; }
+  } catch (e) {
+    // Invalid date inputs fall back to empty string for safe rendering.
+    return '';
+  }
 }
 
 export function formatDateShort(d) {
@@ -195,5 +210,8 @@ export function formatDateShort(d) {
   try {
     const dt = typeof d === 'string' ? new Date(d) : d;
     return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch { return ''; }
+  } catch (e) {
+    // Invalid date inputs fall back to empty string for safe rendering.
+    return '';
+  }
 }

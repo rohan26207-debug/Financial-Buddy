@@ -39,7 +39,10 @@ export default function PageTopBar() {
       try {
         const pdfBlob = await getReportPDFBlob({ state });
         pdfFile = new File([pdfBlob], `finance-buddy-report-${stamp}.pdf`, { type: 'application/pdf' });
-      } catch {}
+      } catch (e) {
+        // If PDF generation fails we silently fall back to JSON-only sharing.
+        console.warn('finance-buddy: PDF generation failed during share', e);
+      }
 
       const jsonText = exportData();
       const jsonFile = new File([jsonText], `finance-buddy-backup-${stamp}.json`, { type: 'application/json' });
@@ -65,8 +68,14 @@ export default function PageTopBar() {
         markBackedUp();
         return;
       }
-      // Silent clipboard fallback
-      try { await navigator.clipboard.writeText(jsonText); markBackedUp(); } catch {}
+      // Silent clipboard fallback (no UI popups by design)
+      try {
+        await navigator.clipboard.writeText(jsonText);
+        markBackedUp();
+      } catch (e) {
+        // Clipboard may be unavailable in WebView/file:// contexts; nothing to do.
+        console.warn('finance-buddy: clipboard fallback failed', e);
+      }
     } catch (e) {
       if (e && e.name === 'AbortError') return;
       console.error(e);
