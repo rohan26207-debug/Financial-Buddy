@@ -14,6 +14,10 @@ body {
     color: #111827;
     overscroll-behavior-y: none;
     transition: background-color 200ms ease, color 200ms ease;
+    /* Render the entire UI in monochrome (black & white). Drawers, dialogs
+       and toasts are rendered in portals on body, so they inherit this. */
+    filter: grayscale(1);
+    -webkit-filter: grayscale(1);
 }
 
 html.dark body {

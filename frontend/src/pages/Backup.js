@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
-import { Download, Upload, ChevronRight, Mail, BellRing } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download, Upload, ChevronRight, Mail, BellRing, FilePlus2, Loader2 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
+import { downloadMergedPDF } from '../lib/pdf';
 import PageTopBar from '../components/PageTopBar';
 
 function Section({ title, children }) {
@@ -44,6 +45,8 @@ function formatLastBackup(iso) {
 export default function Backup() {
   const { state, updateSettings, exportData, importData, markBackedUp } = useStore();
   const fileInputRef = useRef(null);
+  const mergeInputRef = useRef(null);
+  const [merging, setMerging] = useState(false);
 
   const triggerDownload = () => {
     const json = exportData();
@@ -91,6 +94,23 @@ export default function Backup() {
     } catch (e) { console.error(e); }
   };
 
+  const onMergeClick = () => mergeInputRef.current?.click();
+
+  const onMergeFilesChosen = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+    setMerging(true);
+    try {
+      await downloadMergedPDF(state, files);
+      markBackedUp();
+    } catch (err) {
+      console.error('Merge failed', err);
+    } finally {
+      setMerging(false);
+    }
+  };
+
   const autoBackupEnabled = !!state.settings?.autoBackupEnabled;
   const autoBackupEmail = state.settings?.autoBackupEmail || '';
   const lastBackupAt = state.settings?.lastBackupAt;
@@ -136,6 +156,40 @@ export default function Backup() {
           <p className="text-[11px] text-gray-400">
             Last backup: <span className="font-semibold text-gray-600">{formatLastBackup(lastBackupAt)}</span>
           </p>
+        </div>
+
+        <div className="px-4 py-3 grid gap-2">
+          <Label className="text-xs flex items-center gap-1.5 text-gray-500">
+            <FilePlus2 size={12} /> Merge PDFs
+          </Label>
+          <p className="text-[11px] text-gray-500">
+            Pick one or more PDFs from this device. They will be merged with the Finance Buddy report (Investments, Rent / Income, Loans) into a single PDF.
+          </p>
+          <Button
+            onClick={onMergeClick}
+            disabled={merging}
+            className="bg-teal-600 hover:bg-teal-700 mt-1 disabled:opacity-60"
+          >
+            {merging ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                Merging…
+              </>
+            ) : (
+              <>
+                <FilePlus2 size={16} className="mr-2" />
+                Merge PDF
+              </>
+            )}
+          </Button>
+          <input
+            ref={mergeInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            hidden
+            onChange={onMergeFilesChosen}
+          />
         </div>
       </Section>
 

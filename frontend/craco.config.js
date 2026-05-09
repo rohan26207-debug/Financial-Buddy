@@ -51,6 +51,24 @@ let webpackConfig = {
         ],
       };
 
+      // pdf-lib bundles its own copy of pako with a broken source-map ref.
+      // Tell source-map-loader to skip pdf-lib so the dev build doesn't fail.
+      webpackConfig.module.rules.forEach((rule) => {
+        if (rule.enforce === 'pre' && Array.isArray(rule.use) && rule.use.some((u) => (u.loader || '').includes('source-map-loader'))) {
+          rule.exclude = [
+            ...(Array.isArray(rule.exclude) ? rule.exclude : rule.exclude ? [rule.exclude] : []),
+            /node_modules\/pdf-lib/,
+            /node_modules\/pako/,
+          ];
+        }
+      });
+      // Also silence missing source-map warnings globally
+      webpackConfig.ignoreWarnings = [
+        ...(webpackConfig.ignoreWarnings || []),
+        /Failed to parse source map/,
+        /ENOENT.*pako\.esm\.mjs/,
+      ];
+
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);

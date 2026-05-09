@@ -232,3 +232,50 @@ export async function getReportPDFBlob({ state }) {
   const doc = await generateReportPDF({ state });
   return doc.output('blob');
 }
+
+// Merge the in-app report PDF with one or more user-supplied PDF Files.
+// Returns a Blob of the merged PDF. The report is placed first.
+export async function mergeReportWithPDFs(state, files) {
+  const { PDFDocument } = await import('pdf-lib');
+
+  const merged = await PDFDocument.create();
+
+  // 1) Add the in-app generated report PDF first
+  try {
+    const reportBlob = await getReportPDFBlob({ state });
+    const reportBytes = await reportBlob.arrayBuffer();
+    const reportDoc = await PDFDocument.load(reportBytes);
+    const reportPages = await merged.copyPages(reportDoc, reportDoc.getPageIndices());
+    reportPages.forEach((p) => merged.addPage(p));
+  } catch (e) {
+    console.error('Could not embed report PDF', e);
+  }
+
+  // 2) Append every user-picked PDF in selection order
+  for (const file of files) {
+    try {
+      const bytes = await file.arrayBuffer();
+      const extra = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pages = await merged.copyPages(extra, extra.getPageIndices());
+      pages.forEach((p) => merged.addPage(p));
+    } catch (e) {
+      console.error('Failed to merge file', file.name, e);
+    }
+  }
+
+  const out = await merged.save();
+  return new Blob([out], { type: 'application/pdf' });
+}
+
+export async function downloadMergedPDF(state, files) {
+  const blob = await mergeReportWithPDFs(state, files);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.download = `finance-buddy-merged-${stamp}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
