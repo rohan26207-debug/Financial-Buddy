@@ -5,11 +5,13 @@ import { StoreProvider } from './lib/store';
 import Layout from './components/Layout';
 import Loans from './pages/Loans';
 import Investments from './pages/Investments';
+import Income from './pages/Income';
 import Reminders from './pages/Reminders';
 import Todos from './pages/Todos';
 import Calculators from './pages/Calculators';
 import CalculatorDetail from './pages/CalculatorDetail';
 import Settings from './pages/Settings';
+import ContactInfo from './pages/ContactInfo';
 import { Toaster } from './components/ui/sonner';
 
 function App() {
@@ -22,11 +24,13 @@ function App() {
               <Route path="/" element={<Navigate to="/investments" replace />} />
               <Route path="/loans" element={<Loans />} />
               <Route path="/investments" element={<Investments />} />
+              <Route path="/income" element={<Income />} />
               <Route path="/reminders" element={<Reminders />} />
               <Route path="/todos" element={<Todos />} />
               <Route path="/calculators" element={<Calculators />} />
               <Route path="/calculators/:id" element={<CalculatorDetail />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/contact" element={<ContactInfo />} />
             </Route>
           </Routes>
         </HashRouter>

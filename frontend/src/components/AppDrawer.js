@@ -1,10 +1,11 @@
 import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Banknote, DollarSign, Clock, ListChecks, Calculator, Settings as SettingsIcon, Wallet, Info, X } from 'lucide-react';
+import { Banknote, DollarSign, Clock, ListChecks, Calculator, Settings as SettingsIcon, Wallet, Info, HandCoins, ContactRound } from 'lucide-react';
 
 const items = [
   { to: '/investments', label: 'Investments', icon: DollarSign },
+  { to: '/income', label: 'Rent / Income', icon: HandCoins },
   { to: '/loans', label: 'Loans', icon: Banknote },
   { to: '/todos', label: 'Daily Tasks', icon: ListChecks },
   { to: '/reminders', label: 'Daily Reminders', icon: Clock },
@@ -13,6 +14,7 @@ const items = [
 
 const meta = [
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
+  { to: '/contact', label: 'Contact Info', icon: ContactRound },
 ];
 
 export default function AppDrawer({ open, onOpenChange }) {
@@ -29,7 +31,6 @@ export default function AppDrawer({ open, onOpenChange }) {
             </div>
             <div className="min-w-0">
               <SheetTitle className="text-base font-bold text-gray-900">Finance Buddy</SheetTitle>
-              <p className="text-xs text-gray-500">Personal money manager</p>
             </div>
           </div>
         </SheetHeader>

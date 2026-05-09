@@ -18,6 +18,11 @@ export const seedData = {
     { id: 'i6', name: 'Gold Coins', type: 'Gold', currentValue: 11000, costBasis: 10000, notes: '24K coins' },
     { id: 'i7', name: 'SIPs', type: 'SIP', currentValue: 1100, costBasis: 1000, notes: 'Systematic plan' },
   ],
+  incomes: [
+    { id: 'in1', name: 'Apartment Rent', date: '2026-05-01', amount: 1500, description: '2BHK in downtown' },
+    { id: 'in2', name: 'Salary', date: '2026-05-15', amount: 5000, description: 'Monthly job income' },
+    { id: 'in3', name: 'Freelance', date: '2026-05-10', amount: 800, description: 'Side projects' },
+  ],
   reminders: [
     { id: 'r1', title: 'Pay rent and utilities', date: '2026-06-01', note: "Make sure to pay rent on time to avoid fines", done: false },
     { id: 'r2', title: 'Buy groceries and household essentials', date: '2026-06-05', note: "Don't forget to shop for essentials to avoid stock depletion", done: false },

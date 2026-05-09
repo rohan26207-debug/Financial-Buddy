@@ -7,6 +7,7 @@ const STORAGE_KEY = 'finance_buddy_data_v1';
 const emptyState = {
   loans: [],
   investments: [],
+  incomes: [],
   reminders: [],
   todos: [],
   calculators: [],
@@ -16,6 +17,9 @@ const emptyState = {
     locale: 'en-US',
     theme: 'light',
     zoom: 1,
+    autoBackupEnabled: false,
+    autoBackupEmail: '',
+    lastBackupAt: null,
   },
 };
 
@@ -24,6 +28,7 @@ const defaultState = {
   ...emptyState,
   loans: seedData.loans,
   investments: seedData.investments,
+  incomes: seedData.incomes,
   reminders: seedData.reminders,
   todos: seedData.todos,
   calculators: seedData.calculators,
@@ -98,6 +103,34 @@ export function StoreProvider({ children }) {
     setState((prev) => ({ ...prev, contact: { ...(prev.contact || {}), ...patch } }));
   }, []);
 
+  const markBackedUp = useCallback(() => {
+    setState((prev) => ({ ...prev, settings: { ...prev.settings, lastBackupAt: new Date().toISOString() } }));
+  }, []);
+
+  // Auto-backup reminder: when enabled, show a toast on app load if it's been
+  // 7+ days since the last backup.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const s = state.settings || {};
+    if (!s.autoBackupEnabled) return;
+    const last = s.lastBackupAt ? new Date(s.lastBackupAt).getTime() : 0;
+    const days = (Date.now() - last) / 86400000;
+    if (days >= 7) {
+      const t = setTimeout(() => {
+        // dynamic import avoids a circular dep with sonner before tree
+        import('sonner').then(({ toast }) => {
+          toast.warning("It's been 7+ days since your last backup", {
+            description: 'Open Settings and tap "Email Backup" to save it now.',
+            duration: 8000,
+          });
+        });
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Apply theme and zoom to the document
   useEffect(() => {
     const theme = state.settings?.theme || 'light';
@@ -113,7 +146,7 @@ export function StoreProvider({ children }) {
   }, [state.settings?.zoom]);
 
   return (
-    <StoreContext.Provider value={{ state, updateSection, upsertItem, removeItem, updateSettings, updateContact, exportData, importData, resetData }}>
+    <StoreContext.Provider value={{ state, updateSection, upsertItem, removeItem, updateSettings, updateContact, markBackedUp, exportData, importData, resetData }}>
       {children}
     </StoreContext.Provider>
   );

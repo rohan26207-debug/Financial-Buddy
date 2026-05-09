@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Banknote, DollarSign, Clock, ListChecks, Calculator } from 'lucide-react';
+import { Banknote, DollarSign, Clock, ListChecks, Calculator, HandCoins } from 'lucide-react';
 import AppDrawer from './AppDrawer';
 
 const navItems = [
-  { to: '/investments', label: 'Investments', icon: DollarSign },
+  { to: '/investments', label: 'Invest', icon: DollarSign },
+  { to: '/income', label: 'Income', icon: HandCoins },
   { to: '/loans', label: 'Loans', icon: Banknote },
-  { to: '/todos', label: 'To-Do List', icon: ListChecks },
-  { to: '/reminders', label: 'Reminders', icon: Clock },
-  { to: '/calculators', label: 'Calculators', icon: Calculator },
+  { to: '/todos', label: 'Tasks', icon: ListChecks },
+  { to: '/reminders', label: 'Remind', icon: Clock },
+  { to: '/calculators', label: 'Calc', icon: Calculator },
 ];
 
 export default function Layout() {
@@ -26,7 +27,7 @@ export default function Layout() {
 
       {!onDetail && (
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-gray-200 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          <ul className="grid grid-cols-5">
+          <ul className="grid grid-cols-6">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -41,8 +42,8 @@ export default function Layout() {
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} />
-                        <span className={`text-[11px] leading-tight ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
+                        <Icon size={20} strokeWidth={isActive ? 2.4 : 1.8} />
+                        <span className={`text-[10px] leading-tight ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
                       </>
                     )}
                   </NavLink>
