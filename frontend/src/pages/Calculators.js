@@ -35,6 +35,7 @@ function CalcThumb({ label }) {
 const TYPES = [
   { value: 'emi', label: 'EMI / Loan' },
   { value: 'sip', label: 'SIP / Mutual Fund' },
+  { value: 'swp', label: 'SWP / Systematic Withdrawal' },
   { value: 'compound', label: 'Compound Interest' },
   { value: 'simple', label: 'Simple Interest' },
 ];
@@ -54,7 +55,7 @@ export default function Calculators() {
     return state.calculators.filter((c) => c.label.toLowerCase().includes(q));
   }, [search, state.calculators]);
 
-  const startNew = () => { setEditing({ id: '', type: 'emi', label: '', principal: 10000, rate: 8, years: 5, monthly: 1000, compoundsPerYear: 12 }); setOpen(true); };
+  const startNew = () => { setEditing({ id: '', type: 'emi', label: '', principal: 10000, rate: 8, years: 5, monthly: 1000, initial: 1000000, compoundsPerYear: 12 }); setOpen(true); };
 
   const save = () => {
     if (!editing.label.trim()) { toast.error('Label is required'); return; }

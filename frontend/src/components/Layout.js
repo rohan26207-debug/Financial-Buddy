@@ -4,10 +4,10 @@ import { Banknote, DollarSign, Clock, ListChecks, Calculator } from 'lucide-reac
 import AppDrawer from './AppDrawer';
 
 const navItems = [
-  { to: '/loans', label: 'Loans', icon: Banknote },
   { to: '/investments', label: 'Investments', icon: DollarSign },
-  { to: '/reminders', label: 'Reminders', icon: Clock },
+  { to: '/loans', label: 'Loans', icon: Banknote },
   { to: '/todos', label: 'To-Do List', icon: ListChecks },
+  { to: '/reminders', label: 'Reminders', icon: Clock },
   { to: '/calculators', label: 'Calculators', icon: Calculator },
 ];
 

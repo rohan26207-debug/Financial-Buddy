@@ -41,6 +41,7 @@ export const seedData = {
     // each entry stores last computed inputs/result for that calculator type
     { id: 'c1', type: 'emi', label: 'EMI Loan', principal: 100000, rate: 8, years: 5, lastResult: null },
     { id: 'c2', type: 'sip', label: 'Mutual Fund Returns', monthly: 5000, rate: 12, years: 3, lastResult: null },
+    { id: 'c2b', type: 'swp', label: 'Mutual Fund SWP', initial: 1000000, monthly: 8000, rate: 10, years: 20, lastResult: null },
     { id: 'c3', type: 'emi', label: 'EMI Home Loan', principal: 5000000, rate: 7.5, years: 20, lastResult: null },
     { id: 'c4', type: 'compound', label: 'Small Finance Scheme', principal: 10000, rate: 6, years: 1, compoundsPerYear: 4, lastResult: null },
     { id: 'c5', type: 'simple', label: 'Microfinance Product', principal: 5000, rate: 9.5, years: 0.5, lastResult: null },

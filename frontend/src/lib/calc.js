@@ -43,6 +43,45 @@ export function simple(principal, annualRatePct, years) {
   return { amount: P + interest, interest };
 }
 
+// Systematic Withdrawal Plan
+// Initial corpus P, monthly withdrawal W, annual rate (post-tax expected), years
+// Balance at end of n months: P*(1+r)^n - W*((1+r)^n - 1)/r
+export function swp(initial, monthlyWithdrawal, annualRatePct, years) {
+  const P = Number(initial) || 0;
+  const W = Number(monthlyWithdrawal) || 0;
+  const r = (Number(annualRatePct) || 0) / 100 / 12;
+  const n = Math.round((Number(years) || 0) * 12);
+  if (P <= 0 || n <= 0) return { finalBalance: P, totalWithdrawn: 0, totalReturns: 0, monthsUntilDepletion: null, depleted: false };
+  const factor = Math.pow(1 + r, n);
+  let finalBalance;
+  if (r === 0) finalBalance = P - W * n;
+  else finalBalance = P * factor - W * (factor - 1) / r;
+
+  // Find depletion month (if any) by iterating month-by-month
+  let bal = P;
+  let depletedAt = null;
+  let totalWithdrawn = 0;
+  for (let m = 1; m <= n; m++) {
+    bal = bal * (1 + r) - W;
+    if (bal <= 0) {
+      depletedAt = m;
+      totalWithdrawn += (W + bal); // last partial withdrawal
+      bal = 0;
+      break;
+    }
+    totalWithdrawn += W;
+  }
+  if (depletedAt === null) totalWithdrawn = W * n;
+  const totalReturns = (depletedAt === null ? finalBalance : 0) + totalWithdrawn - P;
+  return {
+    finalBalance: depletedAt === null ? finalBalance : 0,
+    totalWithdrawn,
+    totalReturns,
+    monthsUntilDepletion: depletedAt,
+    depleted: depletedAt !== null,
+  };
+}
+
 export function calculatorPrimary(c) {
   if (c.type === 'emi') {
     const r = emi(c.principal, c.rate, c.years);
@@ -59,6 +98,14 @@ export function calculatorPrimary(c) {
   if (c.type === 'simple') {
     const r = simple(c.principal, c.rate, c.years);
     return { primaryLabel: 'Total interest paid', primaryValue: r.interest, all: r };
+  }
+  if (c.type === 'swp') {
+    const r = swp(c.initial, c.monthly, c.rate, c.years);
+    return {
+      primaryLabel: r.depleted ? 'Depletes after ' + r.monthsUntilDepletion + ' months' : 'Final balance',
+      primaryValue: r.depleted ? r.totalWithdrawn : r.finalBalance,
+      all: r,
+    };
   }
   return { primaryLabel: '', primaryValue: 0, all: {} };
 }

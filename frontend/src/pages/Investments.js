@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Search, Menu, ChevronRight, Trash2, TrendingUp, PieChart, Building2, LineChart, Layers, Coins, Wallet } from 'lucide-react';
+import { Plus, Search, Menu, ChevronRight, Trash2, TrendingUp, PieChart, Building2, LineChart, Layers, Coins, Wallet, Landmark } from 'lucide-react';
 import { useStore, useCurrency, cryptoId } from '../lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 
-const TYPES = ['Stocks', 'Mutual Funds', 'Real Estate', 'Bonds', 'ETFs', 'Gold', 'SIP', 'Crypto', 'Other'];
+const TYPES = ['Stocks', 'Mutual Funds', 'Bank Account', 'Real Estate', 'Bonds', 'ETFs', 'Gold', 'SIP', 'Crypto', 'Other'];
 
 function TypeIcon({ type }) {
   const map = {
     Stocks: { Icon: TrendingUp, bg: 'from-blue-50 to-blue-100', fg: 'text-blue-600' },
     'Mutual Funds': { Icon: PieChart, bg: 'from-orange-50 to-orange-100', fg: 'text-orange-600' },
+    'Bank Account': { Icon: Landmark, bg: 'from-violet-50 to-violet-100', fg: 'text-violet-600' },
     'Real Estate': { Icon: Building2, bg: 'from-emerald-50 to-emerald-100', fg: 'text-emerald-600' },
     Bonds: { Icon: LineChart, bg: 'from-indigo-50 to-indigo-100', fg: 'text-indigo-600' },
     ETFs: { Icon: Layers, bg: 'from-cyan-50 to-cyan-100', fg: 'text-cyan-600' },

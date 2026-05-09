@@ -4,10 +4,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Banknote, DollarSign, Clock, ListChecks, Calculator, Settings as SettingsIcon, Wallet, Info, X } from 'lucide-react';
 
 const items = [
-  { to: '/loans', label: 'Loans', icon: Banknote },
   { to: '/investments', label: 'Investments', icon: DollarSign },
-  { to: '/reminders', label: 'Daily Reminders', icon: Clock },
+  { to: '/loans', label: 'Loans', icon: Banknote },
   { to: '/todos', label: 'Daily Tasks', icon: ListChecks },
+  { to: '/reminders', label: 'Daily Reminders', icon: Clock },
   { to: '/calculators', label: 'Financial Calculators', icon: Calculator },
 ];
 

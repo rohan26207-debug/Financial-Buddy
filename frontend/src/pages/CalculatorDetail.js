@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 const TYPE_LABELS = {
   emi: 'EMI / Loan',
   sip: 'SIP / Mutual Fund',
+  swp: 'SWP / Systematic Withdrawal',
   compound: 'Compound Interest',
   simple: 'Simple Interest',
 };
@@ -83,6 +84,18 @@ export default function CalculatorDetail() {
               <div className="opacity-80">Maturity Amount</div><div className="font-semibold">{format(result.all.amount)}</div>
             </div>
           )}
+          {data.type === 'swp' && (
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <div className="opacity-80">Total Withdrawn</div>
+                <div className="font-semibold">{format(result.all.totalWithdrawn)}</div>
+              </div>
+              <div>
+                <div className="opacity-80">{result.all.depleted ? 'Status' : 'Final Balance'}</div>
+                <div className="font-semibold">{result.all.depleted ? 'Corpus depleted' : format(result.all.finalBalance)}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 grid gap-4">
@@ -111,6 +124,18 @@ export default function CalculatorDetail() {
               <Label>Monthly Investment</Label>
               <Input type="number" value={data.monthly ?? ''} onChange={(e) => setData({ ...data, monthly: num(e.target.value) })} />
             </div>
+          )}
+          {data.type === 'swp' && (
+            <>
+              <div className="grid gap-1.5">
+                <Label>Initial Amount (Corpus)</Label>
+                <Input type="number" value={data.initial ?? ''} onChange={(e) => setData({ ...data, initial: num(e.target.value) })} placeholder="e.g., 1000000" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Monthly Withdrawal</Label>
+                <Input type="number" value={data.monthly ?? ''} onChange={(e) => setData({ ...data, monthly: num(e.target.value) })} placeholder="e.g., 8000" />
+              </div>
+            </>
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
