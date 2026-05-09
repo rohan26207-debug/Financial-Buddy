@@ -106,11 +106,11 @@ export default function Reminders() {
             </div>
           )}
           </DialogBody>
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter>
+            <Button onClick={save} className="flex-1 bg-teal-600 hover:bg-teal-700">{editing?.id ? 'Save' : 'Add'}</Button>
             {editing?.id && (
-              <Button variant="outline" onClick={() => del(editing.id)} className="text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>
+              <Button variant="outline" onClick={() => del(editing.id)} className="flex-1 text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>
             )}
-            <Button onClick={save} className="bg-teal-600 hover:bg-teal-700">{editing?.id ? 'Save' : 'Add'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

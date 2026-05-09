@@ -166,7 +166,7 @@ export default function CalculatorDetail() {
 
         <div className="mt-8 flex gap-3">
           <Button onClick={onSave} className="flex-1 bg-teal-600 hover:bg-teal-700"><Save size={16} className="mr-1" />Save</Button>
-          <Button variant="outline" onClick={onDelete} className="text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>
+          <Button variant="outline" onClick={onDelete} className="flex-1 text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>
         </div>
       </div>
     </div>
