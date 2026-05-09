@@ -78,8 +78,8 @@ export async function generateReportPDF({ state }) {
       margin: { left: margin, right: margin },
       theme: 'grid',
       styles: {
-        fontSize: 9,
-        cellPadding: 6,
+        fontSize: 15,
+        cellPadding: 8,
         lineColor: BLACK,
         lineWidth: 0.4,
         textColor: BLACK,
