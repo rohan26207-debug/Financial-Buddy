@@ -141,12 +141,19 @@ export async function generateReportPDF({ state }) {
   // ---- Rent / Income ----
   const incomes = state.incomes || [];
   const totalIncome = incomes.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+  const incomeDay = (it) => {
+    if (it.day) return String(it.day);
+    if (it.date) {
+      try { return String(new Date(it.date).getDate()); } catch (e) { return ''; }
+    }
+    return '';
+  };
   if (incomes.length > 0) {
     addSection('Rent / Income', {
-      head: [['Name', 'Date', 'Amount', 'Description']],
+      head: [['Name', 'Day', 'Amount', 'Description']],
       body: incomes.map((it) => [
         it.name || '',
-        fmtDate(it.date),
+        incomeDay(it),
         fmtNum(nf, it.amount),
         it.description || '',
       ]),
@@ -155,11 +162,11 @@ export async function generateReportPDF({ state }) {
         fmtNum(nf, totalIncome),
         '',
       ]],
-      columnStyles: { 2: { halign: 'right' } },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } },
     });
   } else {
     addSection('Rent / Income', {
-      head: [['Name', 'Date', 'Amount', 'Description']],
+      head: [['Name', 'Day', 'Amount', 'Description']],
       body: [[{ content: 'No rent or income entries recorded.', colSpan: 4, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
     });
   }
@@ -167,38 +174,31 @@ export async function generateReportPDF({ state }) {
   // ---- Loans ----
   const loans = state.loans || [];
   const totalLoanCurrent = loans.reduce((s, l) => s + (Number(l.amount) || 0), 0);
-  const totalLoanInitial = loans.reduce((s, l) => {
-    const init = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
-    return s + (Number(init) || 0);
-  }, 0);
   const totalLoanEmi = loans.reduce((s, l) => s + (Number(l.emi) || 0), 0);
   if (loans.length > 0) {
     addSection('Loans', {
-      head: [['Bank / Lender', 'Initial', 'Current', 'Rate %', 'EMI']],
-      body: loans.map((l) => {
-        const init = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
-        return [
-          l.bank || '',
-          fmtNum(nf, init),
-          fmtNum(nf, l.amount),
-          (Number(l.interestRate) || 0).toFixed(2) + '%',
-          fmtNum(nf, l.emi),
-        ];
-      }),
+      head: [['Bank / Lender', 'Current', 'Rate %', 'EMI', 'EMI Day']],
+      body: loans.map((l) => [
+        l.bank || '',
+        fmtNum(nf, l.amount),
+        (Number(l.interestRate) || 0).toFixed(2) + '%',
+        fmtNum(nf, l.emi),
+        l.emiDay ? String(l.emiDay) : '',
+      ]),
       foot: [[
         { content: 'Totals', styles: { halign: 'right' } },
-        fmtNum(nf, totalLoanInitial),
         fmtNum(nf, totalLoanCurrent),
         '',
         fmtNum(nf, totalLoanEmi),
+        '',
       ]],
       columnStyles: {
-        1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' },
+        1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'center' },
       },
     });
   } else {
     addSection('Loans', {
-      head: [['Bank / Lender', 'Initial', 'Current', 'Rate %', 'EMI']],
+      head: [['Bank / Lender', 'Current', 'Rate %', 'EMI', 'EMI Day']],
       body: [[{ content: 'No loans recorded.', colSpan: 5, styles: { halign: 'center', textColor: GRAY_MID, fontStyle: 'italic' } }]],
     });
   }

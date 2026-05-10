@@ -7,8 +7,19 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import PageTopBar from '../components/PageTopBar';
 import { toast } from 'sonner';
+
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => String(i + 1));
+
+function ordinal(d) {
+  const n = Number(d);
+  if (!n) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 function LoanThumb() {
   return (
@@ -45,10 +56,10 @@ export default function Loans() {
     return { current, initial, emi };
   }, [state.loans]);
 
-  const startNew = () => { setEditing({ id: '', bank: '', startDate: '', endDate: '', initialAmount: 0, amount: 0, interestRate: 0, emi: 0, notes: '' }); setOpen(true); };
+  const startNew = () => { setEditing({ id: '', bank: '', startDate: '', endDate: '', initialAmount: 0, amount: 0, interestRate: 0, emi: 0, emiDay: '1', notes: '' }); setOpen(true); };
   const startEdit = (l) => {
     const initialAmount = l.initialAmount === undefined || l.initialAmount === null || l.initialAmount === '' ? l.amount : l.initialAmount;
-    setEditing({ ...l, initialAmount });
+    setEditing({ ...l, initialAmount, emiDay: String(l.emiDay || '1') });
     setOpen(true);
   };
 
@@ -63,6 +74,7 @@ export default function Loans() {
       amount: editing.id ? currentAmount : (currentAmount || initialAmount),
       interestRate: Number(editing.interestRate) || 0,
       emi: Number(editing.emi) || 0,
+      emiDay: String(editing.emiDay || '1'),
     };
     upsertItem('loans', item);
     setOpen(false); setEditing(null);
@@ -120,6 +132,7 @@ export default function Loans() {
                     {Number(l.emi) > 0 && (
                       <div className="text-gray-500 whitespace-nowrap">
                         EMI <span className="font-semibold text-gray-700">{format(l.emi)}</span>
+                        {l.emiDay && <span className="text-gray-400"> on {ordinal(l.emiDay)}</span>}
                       </div>
                     )}
                   </div>
@@ -162,6 +175,20 @@ export default function Loans() {
                   <Label>EMI</Label>
                   <Input type="number" value={editing.emi} onChange={(e) => setEditing({ ...editing, emi: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>EMI day of month</Label>
+                <Select
+                  value={String(editing.emiDay || '1')}
+                  onValueChange={(v) => setEditing({ ...editing, emiDay: v })}
+                >
+                  <SelectTrigger data-testid="loan-emi-day-select"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-[260px]">
+                    {DAY_OPTIONS.map((d) => (
+                      <SelectItem key={d} value={d}>{ordinal(d)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-1.5">
                 <Label>Notes</Label>

@@ -1,13 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Search, ChevronRight, Trash2, Wallet } from 'lucide-react';
-import { useStore, useCurrency, formatDateShort, cryptoId } from '../lib/store';
+import { useStore, useCurrency, cryptoId } from '../lib/store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import PageTopBar from '../components/PageTopBar';
 import { toast } from 'sonner';
+
+// Day-of-month options for monthly recurring rent / income.
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => String(i + 1));
+
+// Render a "5th of every month" style label.
+function ordinal(d) {
+  const n = Number(d);
+  if (!n) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 function IncomeThumb() {
   return (
@@ -35,15 +48,29 @@ export default function Income() {
   const totalMonthly = useMemo(() => incomes.reduce((s, it) => s + (Number(it.amount) || 0), 0), [incomes]);
 
   const startNew = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    setEditing({ id: '', name: '', date: today, amount: 0, description: '' });
+    setEditing({ id: '', name: '', day: '1', amount: 0, description: '' });
     setOpen(true);
   };
-  const startEdit = (it) => { setEditing(it); setOpen(true); };
+  const startEdit = (it) => {
+    // Backwards-compat: if an old entry has only `date`, derive day from it.
+    let day = it.day;
+    if (!day && it.date) {
+      try { day = String(new Date(it.date).getDate()); } catch (e) { /* noop */ }
+    }
+    setEditing({ ...it, day: day || '1' });
+    setOpen(true);
+  };
 
   const save = () => {
     if (!editing.name.trim()) return;
-    upsertItem('incomes', { ...editing, id: editing.id || cryptoId(), amount: Number(editing.amount) || 0 });
+    const item = {
+      ...editing,
+      id: editing.id || cryptoId(),
+      day: String(editing.day || '1'),
+      amount: Number(editing.amount) || 0,
+    };
+    delete item.date; // drop legacy date field on save
+    upsertItem('incomes', item);
     setOpen(false); setEditing(null);
   };
 
@@ -82,19 +109,24 @@ export default function Income() {
         {filtered.length === 0 && (
           <li className="py-12 text-center text-gray-400">No rent or income entries yet. Tap + to add one.</li>
         )}
-        {filtered.map((it) => (
-          <li key={it.id}>
-            <button onClick={() => startEdit(it)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
-              <IncomeThumb />
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-bold text-gray-900 truncate">{it.name}</div>
-                <div className="text-sm text-gray-500 truncate">{formatDateShort(it.date)}{it.description ? ` \u2022 ${it.description}` : ''}</div>
-                <div className="text-sm mt-0.5 font-semibold text-teal-600">{format(it.amount)}</div>
-              </div>
-              <ChevronRight size={20} className="text-gray-300" />
-            </button>
-          </li>
-        ))}
+        {filtered.map((it) => {
+          const dayLabel = it.day
+            ? `Day ${ordinal(it.day)} of every month`
+            : (it.date ? `Day ${ordinal(new Date(it.date).getDate())} of every month` : '');
+          return (
+            <li key={it.id}>
+              <button onClick={() => startEdit(it)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
+                <IncomeThumb />
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-bold text-gray-900 truncate">{it.name}</div>
+                  <div className="text-sm text-gray-500 truncate">{dayLabel}{it.description ? ` \u2022 ${it.description}` : ''}</div>
+                  <div className="text-sm mt-0.5 font-semibold text-teal-600">{format(it.amount)}</div>
+                </div>
+                <ChevronRight size={20} className="text-gray-300" />
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -111,8 +143,18 @@ export default function Income() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Date</Label>
-                  <Input type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} />
+                  <Label>Day of month</Label>
+                  <Select
+                    value={String(editing.day || '1')}
+                    onValueChange={(v) => setEditing({ ...editing, day: v })}
+                  >
+                    <SelectTrigger data-testid="income-day-select"><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-[260px]">
+                      {DAY_OPTIONS.map((d) => (
+                        <SelectItem key={d} value={d}>{ordinal(d)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Amount</Label>
