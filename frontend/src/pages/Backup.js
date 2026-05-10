@@ -51,12 +51,23 @@ export default function Backup() {
 
   const triggerDownload = () => {
     const json = exportData();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `finance-buddy-backup-${stamp}.json`;
+
+    const bridge = getAndroidBridgeOrNull();
+    if (bridge && typeof bridge.saveJsonBackup === 'function') {
+      // Native Android: write the JSON straight into the system Downloads
+      // folder (Blob downloads are blocked inside file:// WebViews).
+      bridge.saveJsonBackup(json, fileName);
+      return;
+    }
+
+    // Web fallback: standard Blob download.
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    a.download = `finance-buddy-backup-${stamp}.json`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

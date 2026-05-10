@@ -15,6 +15,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -43,7 +44,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "FinanceBuddy";
     private static final int SELECT_JSON_FILE_REQUEST = 102;
+    private static final int FILE_CHOOSER_REQUEST = 103;
     private WebView webView;
+    private ValueCallback<Uri[]> fileChooserCallback;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -134,6 +137,26 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            // Result for <input type="file"> file picker.
+            if (fileChooserCallback == null) return;
+            Uri[] results = null;
+            if (resultCode == RESULT_OK && data != null) {
+                if (data.getDataString() != null) {
+                    results = new Uri[]{ Uri.parse(data.getDataString()) };
+                } else if (data.getClipData() != null) {
+                    int n = data.getClipData().getItemCount();
+                    results = new Uri[n];
+                    for (int i = 0; i < n; i++) {
+                        results[i] = data.getClipData().getItemAt(i).getUri();
+                    }
+                }
+            }
+            try { fileChooserCallback.onReceiveValue(results); }
+            catch (Exception e) { Log.e(TAG, "fileChooserCallback failed", e); }
+            fileChooserCallback = null;
+            return;
+        }
         if (requestCode == SELECT_JSON_FILE_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getData() != null) {
             readJsonFile(data.getData());
