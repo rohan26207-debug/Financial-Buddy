@@ -131,7 +131,11 @@ export function StoreProvider({ children }) {
       try {
         delete window.handleAndroidImport;
         delete window.handleAndroidPDFImport;
-      } catch (e) { /* noop */ }
+      } catch (e) {
+        // delete on window can throw on older browsers when the property
+        // is non-configurable; safe to ignore but log for diagnostics.
+        console.warn('finance-buddy: cleanup of Android handlers failed', e);
+      }
     };
   }, [importData]);
 

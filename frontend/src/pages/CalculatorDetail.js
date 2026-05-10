@@ -25,6 +25,12 @@ const TYPE_LABELS = {
   simple: 'Simple Interest',
 };
 
+// Stable references for recharts so they don't allocate on every render.
+const CHART_MARGIN = { top: 8, right: 12, left: 0, bottom: 4 };
+const CHART_TICK = { fontSize: 11 };
+const CHART_TOOLTIP_STYLE = { fontSize: 12, borderRadius: 8 };
+const CHART_LEGEND_STYLE = { fontSize: 12 };
+
 export default function CalculatorDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -228,16 +234,16 @@ export default function CalculatorDetail() {
             ) : (
               <div className="w-full h-[280px] border border-gray-200 rounded-lg p-2 bg-white">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={scheduleRows} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <LineChart data={scheduleRows} margin={CHART_MARGIN}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
                     <XAxis
                       dataKey={data.type === 'compound' || data.type === 'simple' ? 'year' : 'month'}
-                      tick={{ fontSize: 11 }}
+                      tick={CHART_TICK}
                       stroke="#374151"
                     />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#374151" tickFormatter={(v) => formatPlain(v, { decimals: 0 })} width={70} />
-                    <Tooltip formatter={(v) => formatPlain(v, { decimals: 0 })} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <YAxis tick={CHART_TICK} stroke="#374151" tickFormatter={(v) => formatPlain(v, { decimals: 0 })} width={70} />
+                    <Tooltip formatter={(v) => formatPlain(v, { decimals: 0 })} contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Legend wrapperStyle={CHART_LEGEND_STYLE} />
                     {data.type === 'sip' && (
                       <>
                         <Line type="monotone" dataKey="invested" name="Invested" stroke="#374151" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} />

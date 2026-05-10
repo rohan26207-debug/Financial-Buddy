@@ -66,7 +66,12 @@ export default function SwipeRow({ children, onDelete, testId }) {
         return;
       }
       horizontal.current = true;
-      try { e.preventDefault?.(); } catch (err) { /* noop */ }
+      try { e.preventDefault?.(); }
+      catch (err) {
+        // Some passive listeners reject preventDefault; we can ignore it
+        // because vertical scroll is not the active gesture here.
+        console.warn('SwipeRow: preventDefault failed', err);
+      }
     }
 
     const next = Math.max(-REVEAL_PX, Math.min(0, baseOffset + dx));
