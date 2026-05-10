@@ -222,25 +222,95 @@ export async function generateReportPDF({ state }) {
 }
 
 export async function downloadReportPDF({ state }) {
-  const doc = await generateReportPDF({ state });
+  // Use the embedded-data variant so the generated PDF can later be
+  // re-imported back into the app via Backup -> Import from PDF.
+  const blob = await getReportPDFBlobWithData({ state });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  doc.save(`finance-buddy-report-${stamp}.pdf`);
-  return doc;
+  a.download = `finance-buddy-report-${stamp}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // Returns the PDF as a base64 string (without the data URI prefix).
 // Used by the Android JS bridge to hand the PDF to the native
 // system: it gets saved to Downloads and opened in a PDF viewer.
+// The PDF includes the embedded JSON backup data.
 export async function getReportPDFBase64({ state }) {
-  const doc = await generateReportPDF({ state });
-  const dataUri = doc.output('datauristring');
-  const idx = dataUri.indexOf('base64,');
-  return idx >= 0 ? dataUri.slice(idx + 'base64,'.length) : dataUri;
+  return getReportPDFBase64WithData({ state });
 }
 
 export async function getReportPDFBlob({ state }) {
+  // Always include embedded backup data so the file is round-trippable.
+  return getReportPDFBlobWithData({ state });
+}
+
+// -------------- Embedded backup data (round-trip Import from PDF) --------------
+//
+// We encode the full JSON state as base64 and append it after the PDF's
+// %%EOF marker, wrapped in unique sentinels. PDF viewers ignore data
+// after %%EOF, but we can scan the raw bytes during import and pull
+// the JSON back out, so a user can fully restore their data from a
+// previously-generated Finance Buddy PDF.
+
+const FB_MARK_START = '%%FB-DATA-START%%';
+const FB_MARK_END = '%%FB-DATA-END%%';
+
+function utf8ToBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function base64ToUtf8(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function appendBackupTrailer(pdfBytes, jsonString) {
+  const tail = '\n' + FB_MARK_START + utf8ToBase64(jsonString) + FB_MARK_END + '\n';
+  const tailBytes = new TextEncoder().encode(tail);
+  const out = new Uint8Array(pdfBytes.byteLength + tailBytes.byteLength);
+  out.set(new Uint8Array(pdfBytes), 0);
+  out.set(tailBytes, pdfBytes.byteLength);
+  return out;
+}
+
+export async function getReportPDFBlobWithData({ state }) {
   const doc = await generateReportPDF({ state });
-  return doc.output('blob');
+  const pdfBytes = doc.output('arraybuffer');
+  const json = JSON.stringify(state);
+  const finalBytes = appendBackupTrailer(pdfBytes, json);
+  return new Blob([finalBytes], { type: 'application/pdf' });
+}
+
+export async function getReportPDFBase64WithData({ state }) {
+  const blob = await getReportPDFBlobWithData({ state });
+  const buf = await blob.arrayBuffer();
+  let bin = '';
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < view.length; i++) bin += String.fromCharCode(view[i]);
+  return btoa(bin);
+}
+
+// Read a (possibly Finance-Buddy-generated) PDF and return the JSON
+// string we embedded in it, or null if no backup was found.
+export async function extractBackupFromPDF(file) {
+  const buf = await file.arrayBuffer();
+  const text = new TextDecoder('latin1').decode(buf);
+  const startIdx = text.indexOf(FB_MARK_START);
+  const endIdx = text.indexOf(FB_MARK_END, startIdx + FB_MARK_START.length);
+  if (startIdx === -1 || endIdx === -1) return null;
+  const b64 = text.slice(startIdx + FB_MARK_START.length, endIdx).replace(/\s+/g, '');
+  try { return base64ToUtf8(b64); }
+  catch (e) { console.warn('extractBackupFromPDF: invalid base64', e); return null; }
 }
 
 // Merge the in-app report PDF with one or more user-supplied PDF Files.
