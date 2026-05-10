@@ -1,14 +1,17 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from './ui/dialog';
+import { ArrowLeft } from 'lucide-react';
 import { useStore, useCurrency } from '../lib/store';
 import { useBackHandler } from '../lib/backStack';
 
 /**
  * ReportPreview
  * -------------
- * On-screen "V" view of the same data the PDF report renders.
- * Sections mirror /app/frontend/src/lib/pdf.js exactly so users
- * can see what they will get before sharing the PDF.
+ * In-page view of the same data the PDF report renders.
+ * Mirrors /app/frontend/src/lib/pdf.js section/column structure.
+ *
+ * Renders as a full-screen panel inside the app shell (NOT a popup
+ * dialog). The header has a back arrow that closes it; on Android the
+ * hardware back button also dismisses via useBackHandler.
  */
 function fmtNum(formatPlain, v) { return formatPlain(v, { decimals: 2 }); }
 
@@ -20,17 +23,19 @@ function incomeDay(it) {
   return '';
 }
 
-const Th = ({ children, align = 'left' }) => (
+const Th = ({ children, align = 'left', colSpan }) => (
   <th
-    className={`py-2 px-2 font-semibold border-b border-black bg-white text-${align}`}
+    colSpan={colSpan}
+    className="py-2 px-2 font-semibold border-b border-black bg-white"
     style={{ textAlign: align }}
   >
     {children}
   </th>
 );
 
-const Td = ({ children, align = 'left', muted = false }) => (
+const Td = ({ children, align = 'left', muted = false, colSpan }) => (
   <td
+    colSpan={colSpan}
     className={`py-1.5 px-2 border-b border-gray-200 ${muted ? 'text-gray-500 italic' : 'text-gray-900'}`}
     style={{ textAlign: align }}
   >
@@ -38,8 +43,9 @@ const Td = ({ children, align = 'left', muted = false }) => (
   </td>
 );
 
-const Tf = ({ children, align = 'left' }) => (
+const Tf = ({ children, align = 'left', colSpan }) => (
   <td
+    colSpan={colSpan}
     className="py-2 px-2 font-semibold border-t-2 border-black bg-gray-50"
     style={{ textAlign: align }}
   >
@@ -62,6 +68,9 @@ export default function ReportPreview({ open, onOpenChange }) {
   const { state } = useStore();
   const { formatPlain } = useCurrency();
   useBackHandler(open, () => onOpenChange(false));
+
+  if (!open) return null;
+
   const contact = state.contact || {};
   const investments = state.investments || [];
   const incomes = state.incomes || [];
@@ -79,139 +88,153 @@ export default function ReportPreview({ open, onOpenChange }) {
   const generatedAt = new Date().toLocaleString();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[94vw] sm:max-w-[640px] rounded-2xl">
-        <DialogHeader>
-          <DialogTitle data-testid="report-preview-title">Report preview</DialogTitle>
-        </DialogHeader>
-        <DialogBody>
-          <div className="bg-white text-gray-900" data-testid="report-preview-body">
-            {/* Header that mirrors the PDF cover */}
-            <header className="border-b-2 border-black pb-3">
-              <div className="text-2xl font-extrabold tracking-tight">Finance Buddy</div>
-              <div className="text-[11px] text-gray-500 mt-0.5">Generated {generatedAt}</div>
-              {(contact.name || contact.email || contact.phone) && (
-                <div className="text-xs text-gray-700 mt-1">
-                  {[contact.name, contact.email, contact.phone].filter(Boolean).join(' \u2022 ')}
-                </div>
-              )}
-            </header>
+    <div
+      className="fixed inset-0 z-50 bg-white overflow-y-auto"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      data-testid="report-preview-panel"
+    >
+      <div className="px-5 pt-4 pb-10 max-w-[480px] mx-auto">
+        {/* Header with back arrow (in-page, not a modal) */}
+        <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={() => onOpenChange(false)}
+            aria-label="Back"
+            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 text-gray-700"
+            data-testid="report-preview-back"
+          >
+            <ArrowLeft size={22} />
+          </button>
+          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900" data-testid="report-preview-title">
+            Report
+          </h1>
+        </div>
 
-            {/* Investments */}
-            <Section title="Investments">
-              <thead>
-                <tr>
-                  <Th>Name</Th>
-                  <Th>Type</Th>
-                  <Th align="right">Cost Basis</Th>
-                  <Th align="right">Current Value</Th>
-                  <Th align="right">Gain / Loss</Th>
+        <div className="bg-white text-gray-900" data-testid="report-preview-body">
+          {/* Mirrors the PDF cover */}
+          <header className="border-b-2 border-black pb-3">
+            <div className="text-2xl font-extrabold tracking-tight">Finance Buddy</div>
+            <div className="text-[11px] text-gray-500 mt-0.5">Generated {generatedAt}</div>
+            {(contact.name || contact.email || contact.phone) && (
+              <div className="text-xs text-gray-700 mt-1">
+                {[contact.name, contact.email, contact.phone].filter(Boolean).join(' \u2022 ')}
+              </div>
+            )}
+          </header>
+
+          {/* Investments */}
+          <Section title="Investments">
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Type</Th>
+                <Th align="right">Cost Basis</Th>
+                <Th align="right">Current Value</Th>
+                <Th align="right">Gain / Loss</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {investments.length === 0 ? (
+                <tr><Td muted align="center" colSpan={5}>No investments recorded.</Td></tr>
+              ) : investments.map((i) => (
+                <tr key={i.id}>
+                  <Td>{i.name || ''}</Td>
+                  <Td>{i.type || ''}</Td>
+                  <Td align="right">{fmtNum(formatPlain, i.costBasis)}</Td>
+                  <Td align="right">{fmtNum(formatPlain, i.currentValue)}</Td>
+                  <Td align="right">{fmtNum(formatPlain, (Number(i.currentValue) || 0) - (Number(i.costBasis) || 0))}</Td>
                 </tr>
-              </thead>
-              <tbody>
-                {investments.length === 0 ? (
-                  <tr><Td muted align="center" colSpan={5}><span className="block text-center" >No investments recorded.</span></Td></tr>
-                ) : investments.map((i) => (
-                  <tr key={i.id}>
-                    <Td>{i.name || ''}</Td>
-                    <Td>{i.type || ''}</Td>
-                    <Td align="right">{fmtNum(formatPlain, i.costBasis)}</Td>
-                    <Td align="right">{fmtNum(formatPlain, i.currentValue)}</Td>
-                    <Td align="right">{fmtNum(formatPlain, (Number(i.currentValue) || 0) - (Number(i.costBasis) || 0))}</Td>
-                  </tr>
-                ))}
-              </tbody>
-              {investments.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <Tf align="right">Totals</Tf>
-                    <Tf />
-                    <Tf align="right">{fmtNum(formatPlain, totalCost)}</Tf>
-                    <Tf align="right">{fmtNum(formatPlain, totalCurrent)}</Tf>
-                    <Tf align="right">{fmtNum(formatPlain, totalGain)}</Tf>
-                  </tr>
-                </tfoot>
-              )}
-            </Section>
-
-            {/* Rent / Income */}
-            <Section title="Rent / Income">
-              <thead>
+              ))}
+            </tbody>
+            {investments.length > 0 && (
+              <tfoot>
                 <tr>
-                  <Th>Name</Th>
-                  <Th align="center">Day</Th>
-                  <Th align="right">Amount</Th>
-                  <Th>Description</Th>
+                  <Tf align="right">Totals</Tf>
+                  <Tf />
+                  <Tf align="right">{fmtNum(formatPlain, totalCost)}</Tf>
+                  <Tf align="right">{fmtNum(formatPlain, totalCurrent)}</Tf>
+                  <Tf align="right">{fmtNum(formatPlain, totalGain)}</Tf>
                 </tr>
-              </thead>
-              <tbody>
-                {incomes.length === 0 ? (
-                  <tr><Td muted align="center" colSpan={4}>No rent or income entries recorded.</Td></tr>
-                ) : incomes.map((it) => (
-                  <tr key={it.id}>
-                    <Td>{it.name || ''}</Td>
-                    <Td align="center">{incomeDay(it)}</Td>
-                    <Td align="right">{fmtNum(formatPlain, it.amount)}</Td>
-                    <Td>{it.description || ''}</Td>
-                  </tr>
-                ))}
-              </tbody>
-              {incomes.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <Tf align="right">Total Monthly Rent / Income</Tf>
-                    <Tf />
-                    <Tf align="right">{fmtNum(formatPlain, totalIncome)}</Tf>
-                    <Tf />
-                  </tr>
-                </tfoot>
-              )}
-            </Section>
+              </tfoot>
+            )}
+          </Section>
 
-            {/* Loans */}
-            <Section title="Loans">
-              <thead>
+          {/* Rent / Income */}
+          <Section title="Rent / Income">
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th align="center">Day</Th>
+                <Th align="right">Amount</Th>
+                <Th>Description</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {incomes.length === 0 ? (
+                <tr><Td muted align="center" colSpan={4}>No rent or income entries recorded.</Td></tr>
+              ) : incomes.map((it) => (
+                <tr key={it.id}>
+                  <Td>{it.name || ''}</Td>
+                  <Td align="center">{incomeDay(it)}</Td>
+                  <Td align="right">{fmtNum(formatPlain, it.amount)}</Td>
+                  <Td>{it.description || ''}</Td>
+                </tr>
+              ))}
+            </tbody>
+            {incomes.length > 0 && (
+              <tfoot>
                 <tr>
-                  <Th>Bank / Lender</Th>
-                  <Th align="right">Current</Th>
-                  <Th align="right">Rate %</Th>
-                  <Th align="right">EMI</Th>
-                  <Th align="center">EMI Day</Th>
+                  <Tf align="right">Total Monthly Rent / Income</Tf>
+                  <Tf />
+                  <Tf align="right">{fmtNum(formatPlain, totalIncome)}</Tf>
+                  <Tf />
                 </tr>
-              </thead>
-              <tbody>
-                {loans.length === 0 ? (
-                  <tr><Td muted align="center" colSpan={5}>No loans recorded.</Td></tr>
-                ) : loans.map((l) => (
-                  <tr key={l.id}>
-                    <Td>{l.bank || ''}</Td>
-                    <Td align="right">{fmtNum(formatPlain, l.amount)}</Td>
-                    <Td align="right">{(Number(l.interestRate) || 0).toFixed(2)}%</Td>
-                    <Td align="right">{fmtNum(formatPlain, l.emi)}</Td>
-                    <Td align="center">{l.emiDay || ''}</Td>
-                  </tr>
-                ))}
-              </tbody>
-              {loans.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <Tf align="right">Totals</Tf>
-                    <Tf align="right">{fmtNum(formatPlain, totalLoanCurrent)}</Tf>
-                    <Tf />
-                    <Tf align="right">{fmtNum(formatPlain, totalLoanEmi)}</Tf>
-                    <Tf />
-                  </tr>
-                </tfoot>
-              )}
-            </Section>
+              </tfoot>
+            )}
+          </Section>
 
-            <footer className="mt-6 pt-3 border-t border-gray-300 flex items-center justify-between text-[11px] text-gray-500">
-              <span>Finance Buddy &bull; Offline-first PWA</span>
-              <span>Preview</span>
-            </footer>
-          </div>
-        </DialogBody>
-      </DialogContent>
-    </Dialog>
+          {/* Loans */}
+          <Section title="Loans">
+            <thead>
+              <tr>
+                <Th>Bank / Lender</Th>
+                <Th align="right">Current</Th>
+                <Th align="right">Rate %</Th>
+                <Th align="right">EMI</Th>
+                <Th align="center">EMI Day</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {loans.length === 0 ? (
+                <tr><Td muted align="center" colSpan={5}>No loans recorded.</Td></tr>
+              ) : loans.map((l) => (
+                <tr key={l.id}>
+                  <Td>{l.bank || ''}</Td>
+                  <Td align="right">{fmtNum(formatPlain, l.amount)}</Td>
+                  <Td align="right">{(Number(l.interestRate) || 0).toFixed(2)}%</Td>
+                  <Td align="right">{fmtNum(formatPlain, l.emi)}</Td>
+                  <Td align="center">{l.emiDay || ''}</Td>
+                </tr>
+              ))}
+            </tbody>
+            {loans.length > 0 && (
+              <tfoot>
+                <tr>
+                  <Tf align="right">Totals</Tf>
+                  <Tf align="right">{fmtNum(formatPlain, totalLoanCurrent)}</Tf>
+                  <Tf />
+                  <Tf align="right">{fmtNum(formatPlain, totalLoanEmi)}</Tf>
+                  <Tf />
+                </tr>
+              </tfoot>
+            )}
+          </Section>
+
+          <footer className="mt-6 pt-3 border-t border-gray-300 flex items-center justify-between text-[11px] text-gray-500">
+            <span>Finance Buddy &bull; Offline-first PWA</span>
+            <span>Preview</span>
+          </footer>
+        </div>
+      </div>
+    </div>
   );
 }
