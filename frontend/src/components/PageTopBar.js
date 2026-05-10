@@ -13,6 +13,8 @@ function getAndroidBridge() {
   return null;
 }
 
+export function getAndroidBridgeOrNull() { return getAndroidBridge(); }
+
 export default function PageTopBar() {
   const { openDrawer } = useOutletContext() || {};
   const { state, updateSettings, exportData, markBackedUp } = useStore();
@@ -55,11 +57,17 @@ export default function PageTopBar() {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const jsonText = exportData();
       const jsonName = `finance-buddy-backup-${stamp}.json`;
+      const pdfName = `finance-buddy-report-${stamp}.pdf`;
 
       const bridge = getAndroidBridge();
-      if (bridge && typeof bridge.saveJsonBackup === 'function') {
-        // Native Android: save backup to Downloads (silent, no toasts in our UI).
-        bridge.saveJsonBackup(jsonText, jsonName);
+      if (bridge && typeof bridge.shareBackup === 'function') {
+        // Native Android: open the system share sheet (Email/WhatsApp/Drive
+        // /Bluetooth/etc.) with both the PDF report and the JSON backup
+        // attached.
+        let pdfBase64 = '';
+        try { pdfBase64 = await getReportPDFBase64({ state }); }
+        catch (e) { console.warn('PDF generation failed during share', e); }
+        bridge.shareBackup(pdfBase64, pdfName, jsonText, jsonName);
         markBackedUp();
         return;
       }
@@ -68,7 +76,7 @@ export default function PageTopBar() {
       let pdfFile = null;
       try {
         const pdfBlob = await getReportPDFBlob({ state });
-        pdfFile = new File([pdfBlob], `finance-buddy-report-${stamp}.pdf`, { type: 'application/pdf' });
+        pdfFile = new File([pdfBlob], pdfName, { type: 'application/pdf' });
       } catch (e) {
         console.warn('PDF generation failed during share', e);
       }

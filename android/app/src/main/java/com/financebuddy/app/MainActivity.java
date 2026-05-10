@@ -22,9 +22,13 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 
 /**
  * Finance Buddy - 100% offline WebView wrapper.
@@ -222,9 +226,11 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("application/json");
+                // Accept JSON and PDF (PDF files now carry an embedded JSON backup
+                // that the React app can extract via Backup -> Import from PDF).
+                intent.setType("*/*");
                 intent.putExtra(Intent.EXTRA_MIME_TYPES,
-                        new String[]{"application/json", "text/plain"});
+                        new String[]{"application/json", "application/pdf", "text/plain"});
                 try {
                     MainActivity.this.startActivityForResult(
                             intent, SELECT_JSON_FILE_REQUEST);
@@ -232,6 +238,140 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(TAG, "selectJsonBackup failed", e);
                 }
             });
+        }
+
+        /**
+         * Fire a system Share intent that attaches both the PDF report and
+         * the JSON backup so the user can pick Email, WhatsApp, Drive,
+         * Bluetooth, etc. from the share sheet.
+         *
+         * Either argument may be null/empty to share only the other one.
+         */
+        @JavascriptInterface
+        public void shareBackup(String pdfBase64, String pdfFileName,
+                                String jsonData, String jsonFileName) {
+            runOnUiThread(() -> {
+                try {
+                    ArrayList<Uri> uris = new ArrayList<>();
+                    if (pdfBase64 != null && pdfBase64.length() > 0) {
+                        byte[] pdfBytes = Base64.decode(pdfBase64, Base64.DEFAULT);
+                        Uri u = writeToCacheAndUri(
+                                pdfFileName != null ? pdfFileName : "finance-buddy-report.pdf",
+                                pdfBytes);
+                        if (u != null) uris.add(u);
+                    }
+                    if (jsonData != null && jsonData.length() > 0) {
+                        Uri u = writeToCacheAndUri(
+                                jsonFileName != null ? jsonFileName : "finance-buddy-backup.json",
+                                jsonData.getBytes("UTF-8"));
+                        if (u != null) uris.add(u);
+                    }
+                    if (uris.isEmpty()) {
+                        Toast.makeText(context, "Nothing to share", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    Intent intent;
+                    if (uris.size() == 1) {
+                        intent = new Intent(Intent.ACTION_SEND);
+                        intent.putExtra(Intent.EXTRA_STREAM, uris.get(0));
+                        intent.setType(uris.get(0).toString().endsWith(".pdf")
+                                ? "application/pdf" : "application/json");
+                    } else {
+                        intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                        intent.setType("*/*");
+                    }
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "Finance Buddy backup");
+                    intent.putExtra(Intent.EXTRA_TEXT,
+                            "Finance Buddy data backup and report.");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(intent, "Share backup"));
+                } catch (Exception e) {
+                    Log.e(TAG, "shareBackup failed", e);
+                    Toast.makeText(context,
+                            "Could not share: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        /**
+         * Open the user's email app with the JSON backup (and optionally
+         * the PDF) pre-attached. Falls back to a generic share sheet if
+         * no email client handles ACTION_SENDTO with mailto:.
+         */
+        @JavascriptInterface
+        public void emailBackup(String jsonData, String jsonFileName,
+                                String pdfBase64, String pdfFileName,
+                                String toAddress) {
+            runOnUiThread(() -> {
+                try {
+                    ArrayList<Uri> uris = new ArrayList<>();
+                    if (jsonData != null && jsonData.length() > 0) {
+                        Uri u = writeToCacheAndUri(
+                                jsonFileName != null ? jsonFileName : "finance-buddy-backup.json",
+                                jsonData.getBytes("UTF-8"));
+                        if (u != null) uris.add(u);
+                    }
+                    if (pdfBase64 != null && pdfBase64.length() > 0) {
+                        byte[] pdfBytes = Base64.decode(pdfBase64, Base64.DEFAULT);
+                        Uri u = writeToCacheAndUri(
+                                pdfFileName != null ? pdfFileName : "finance-buddy-report.pdf",
+                                pdfBytes);
+                        if (u != null) uris.add(u);
+                    }
+                    Intent intent;
+                    if (uris.size() <= 1) {
+                        intent = new Intent(Intent.ACTION_SEND);
+                        if (uris.size() == 1) {
+                            intent.putExtra(Intent.EXTRA_STREAM, uris.get(0));
+                        }
+                    } else {
+                        intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                    }
+                    intent.setType("application/json");
+                    if (toAddress != null && toAddress.length() > 0) {
+                        intent.putExtra(Intent.EXTRA_EMAIL, new String[]{toAddress});
+                    }
+                    intent.putExtra(Intent.EXTRA_SUBJECT, "Finance Buddy backup");
+                    intent.putExtra(Intent.EXTRA_TEXT,
+                            "Attached is your Finance Buddy backup.");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                    // Prefer an email-only chooser if any email app is installed.
+                    Intent chooser = Intent.createChooser(intent, "Email backup");
+                    startActivity(chooser);
+                } catch (Exception e) {
+                    Log.e(TAG, "emailBackup failed", e);
+                    Toast.makeText(context,
+                            "Could not start email: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    }
+
+    /**
+     * Write `bytes` into the app's cache directory and return a content://
+     * Uri for it via FileProvider, suitable for ACTION_SEND attachments.
+     */
+    private Uri writeToCacheAndUri(String fileName, byte[] bytes) {
+        try {
+            File dir = new File(getCacheDir(), "share");
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.w(TAG, "mkdir failed for share cache");
+            }
+            File f = new File(dir, fileName);
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                fos.write(bytes);
+                fos.flush();
+            }
+            return FileProvider.getUriForFile(this,
+                    getApplicationContext().getPackageName() + ".fileprovider", f);
+        } catch (IOException e) {
+            Log.e(TAG, "writeToCacheAndUri failed", e);
+            return null;
         }
     }
 
