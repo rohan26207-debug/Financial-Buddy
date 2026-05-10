@@ -1,6 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from './ui/dialog';
-import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from './ui/dialog';
 import { useStore, useCurrency } from '../lib/store';
 
 /**
@@ -210,9 +209,6 @@ export default function ReportPreview({ open, onOpenChange }) {
             </footer>
           </div>
         </DialogBody>
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} className="flex-1" data-testid="report-preview-close">Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
