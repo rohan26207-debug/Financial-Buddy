@@ -10,4 +10,6 @@
 local.properties
 app/build/
 app/release/
-app/src/main/assets/
+# NOTE: Do NOT ignore app/src/main/assets/ -- it contains the React PWA bundle
+# (index.html, static/) that the WebView loads. Ignoring it causes
+# net::ERR_FILE_NOT_FOUND when building the APK from a fresh clone.
