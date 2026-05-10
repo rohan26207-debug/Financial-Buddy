@@ -109,3 +109,89 @@ export function calculatorPrimary(c) {
   }
   return { primaryLabel: '', primaryValue: 0, all: {} };
 }
+
+// -------------- Schedules used by Show Chart --------------
+
+// Loan amortization: returns rows with month, principal paid, interest paid, balance
+export function emiSchedule(principal, annualRatePct, years) {
+  const P = Number(principal) || 0;
+  const r = (Number(annualRatePct) || 0) / 100 / 12;
+  const n = Math.round((Number(years) || 0) * 12);
+  if (P <= 0 || n <= 0) return [];
+  const emiVal = r === 0 ? P / n : (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  const rows = [];
+  let balance = P;
+  for (let m = 1; m <= n; m++) {
+    const interest = balance * r;
+    const principalPaid = Math.max(0, emiVal - interest);
+    balance = Math.max(0, balance - principalPaid);
+    rows.push({ month: m, principal: principalPaid, interest, balance });
+  }
+  return rows;
+}
+
+// SIP monthly growth: returns rows with month, invested, value
+export function sipSchedule(monthly, annualRatePct, years) {
+  const M = Number(monthly) || 0;
+  const i = (Number(annualRatePct) || 0) / 100 / 12;
+  const n = Math.round((Number(years) || 0) * 12);
+  if (M <= 0 || n <= 0) return [];
+  const rows = [];
+  let value = 0;
+  for (let m = 1; m <= n; m++) {
+    value = (value + M) * (1 + i);
+    rows.push({ month: m, invested: M * m, value });
+  }
+  return rows;
+}
+
+// SWP monthly balance + cumulative withdrawn
+export function swpSchedule(initial, monthlyWithdrawal, annualRatePct, years) {
+  const P = Number(initial) || 0;
+  const W = Number(monthlyWithdrawal) || 0;
+  const r = (Number(annualRatePct) || 0) / 100 / 12;
+  const n = Math.round((Number(years) || 0) * 12);
+  if (P <= 0 || n <= 0) return [];
+  const rows = [];
+  let balance = P;
+  let withdrawn = 0;
+  for (let m = 1; m <= n; m++) {
+    balance = balance * (1 + r) - W;
+    if (balance <= 0) {
+      withdrawn += W + balance; // last partial
+      rows.push({ month: m, balance: 0, withdrawn });
+      break;
+    }
+    withdrawn += W;
+    rows.push({ month: m, balance, withdrawn });
+  }
+  return rows;
+}
+
+// Compound interest yearly growth
+export function compoundSchedule(principal, annualRatePct, years, compoundsPerYear = 1) {
+  const P = Number(principal) || 0;
+  const r = (Number(annualRatePct) || 0) / 100;
+  const t = Number(years) || 0;
+  const m = Number(compoundsPerYear) || 1;
+  if (P <= 0 || t <= 0) return [];
+  const rows = [];
+  for (let y = 1; y <= Math.round(t); y++) {
+    const value = P * Math.pow(1 + r / m, m * y);
+    rows.push({ year: y, value });
+  }
+  return rows;
+}
+
+// Simple interest yearly growth
+export function simpleSchedule(principal, annualRatePct, years) {
+  const P = Number(principal) || 0;
+  const r = (Number(annualRatePct) || 0) / 100;
+  const t = Number(years) || 0;
+  if (P <= 0 || t <= 0) return [];
+  const rows = [];
+  for (let y = 1; y <= Math.round(t); y++) {
+    rows.push({ year: y, value: P + P * r * y });
+  }
+  return rows;
+}

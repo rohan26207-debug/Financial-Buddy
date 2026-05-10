@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Trash2, Save, BarChart3 } from 'lucide-react';
 import { useStore, useCurrency } from '../lib/store';
 import { calculatorPrimary } from '../lib/calc';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import CalcChartDialog from '../components/CalcChartDialog';
 import { toast } from 'sonner';
 
 const TYPE_LABELS = {
@@ -24,6 +25,7 @@ export default function CalculatorDetail() {
   const { format } = useCurrency();
   const stored = state.calculators.find((c) => c.id === id);
   const [data, setData] = useState(stored || null);
+  const [chartOpen, setChartOpen] = useState(false);
 
   useEffect(() => { if (stored) setData(stored); }, [stored]);
 
@@ -163,10 +165,22 @@ export default function CalculatorDetail() {
         </div>
 
         <div className="mt-8 flex gap-3">
-          <Button onClick={onSave} className="flex-1 bg-teal-600 hover:bg-teal-700"><Save size={16} className="mr-1" />Save</Button>
-          <Button variant="outline" onClick={onDelete} className="flex-1 text-rose-600 border-rose-200 hover:bg-rose-50"><Trash2 size={16} className="mr-1" />Delete</Button>
+          <Button onClick={onSave} className="flex-1 bg-teal-600 hover:bg-teal-700" data-testid="calc-save-btn"><Save size={16} className="mr-1" />Save</Button>
+          <Button variant="outline" onClick={onDelete} className="flex-1 text-rose-600 border-rose-200 hover:bg-rose-50" data-testid="calc-delete-btn"><Trash2 size={16} className="mr-1" />Delete</Button>
         </div>
+
+        <Button
+          variant="outline"
+          onClick={() => setChartOpen(true)}
+          className="w-full mt-3 border-gray-300 text-gray-800 hover:bg-gray-100"
+          data-testid="calc-show-chart-btn"
+        >
+          <BarChart3 size={16} className="mr-1" />
+          {data.type === 'emi' ? 'Show schedule' : 'Show chart'}
+        </Button>
       </div>
+
+      <CalcChartDialog open={chartOpen} onOpenChange={setChartOpen} data={data} />
     </div>
   );
 }

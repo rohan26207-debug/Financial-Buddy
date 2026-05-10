@@ -65,15 +65,14 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Mobile-app-style back navigation:
-     *   - If the user is on the home tab (Investments) -> exit the app.
-     *   - Otherwise -> jump to Investments and clear the WebView history
-     *     so the next back press exits cleanly (no in-app history walking).
+     *   - On the home tab (Investments) -> do NOTHING. The user must
+     *     swipe up / use the system gesture to exit. This prevents
+     *     accidental exits from the back button.
+     *   - On any other screen -> jump to Investments and clear the
+     *     WebView history.
      */
     private void goHomeOrExitApp() {
-        if (webView == null) {
-            finish();
-            return;
-        }
+        if (webView == null) return;
         String url = webView.getUrl();
         boolean atHome = url == null
                 || !url.contains("#")
@@ -81,14 +80,12 @@ public class MainActivity extends AppCompatActivity {
                 || url.endsWith("#/investments");
 
         if (atHome) {
-            finish();
+            // Intentionally swallow the back press at home.
             return;
         }
 
         webView.evaluateJavascript(
                 "window.location.hash = '#/investments';", null);
-        // Clear back/forward history once the SPA has navigated, so a
-        // subsequent back press exits the app instead of cycling tabs.
         webView.postDelayed(() -> {
             if (webView != null) webView.clearHistory();
         }, 250);
