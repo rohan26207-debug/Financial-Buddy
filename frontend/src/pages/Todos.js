@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import PageTopBar from '../components/PageTopBar';
+import SwipeRow from '../components/SwipeRow';
 import { toast } from 'sonner';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
