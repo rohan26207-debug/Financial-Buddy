@@ -1,13 +1,20 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Save, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Trash2, Save, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore, useCurrency } from '../lib/store';
-import { calculatorPrimary } from '../lib/calc';
+import {
+  calculatorPrimary,
+  emiSchedule,
+  sipSchedule,
+  swpSchedule,
+  compoundSchedule,
+  simpleSchedule,
+} from '../lib/calc';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import CalcChartDialog from '../components/CalcChartDialog';
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 
 const TYPE_LABELS = {
@@ -22,7 +29,7 @@ export default function CalculatorDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { state, upsertItem, removeItem } = useStore();
-  const { format } = useCurrency();
+  const { format, formatPlain } = useCurrency();
   const stored = state.calculators.find((c) => c.id === id);
   const [data, setData] = useState(stored || null);
   const [chartOpen, setChartOpen] = useState(false);
@@ -30,6 +37,17 @@ export default function CalculatorDetail() {
   useEffect(() => { if (stored) setData(stored); }, [stored]);
 
   const result = useMemo(() => (data ? calculatorPrimary(data) : { primaryLabel: '', primaryValue: 0, all: {} }), [data]);
+
+  // Schedule / chart data derived from the current inputs.
+  const scheduleRows = useMemo(() => {
+    if (!data) return [];
+    if (data.type === 'emi') return emiSchedule(data.principal, data.rate, data.years);
+    if (data.type === 'sip') return sipSchedule(data.monthly, data.rate, data.years);
+    if (data.type === 'swp') return swpSchedule(data.initial, data.monthly, data.rate, data.years);
+    if (data.type === 'compound') return compoundSchedule(data.principal, data.rate, data.years, data.compoundsPerYear);
+    if (data.type === 'simple') return simpleSchedule(data.principal, data.rate, data.years);
+    return [];
+  }, [data]);
 
   if (!data) {
     return (
@@ -171,16 +189,77 @@ export default function CalculatorDetail() {
 
         <Button
           variant="outline"
-          onClick={() => setChartOpen(true)}
+          onClick={() => setChartOpen((v) => !v)}
           className="w-full mt-3 border-gray-300 text-gray-800 hover:bg-gray-100"
           data-testid="calc-show-chart-btn"
         >
           <BarChart3 size={16} className="mr-1" />
-          {data.type === 'emi' ? 'Show schedule' : 'Show chart'}
+          {chartOpen ? 'Hide ' : 'Show '}{data.type === 'emi' ? 'schedule' : 'chart'}
+          {chartOpen ? <ChevronUp size={16} className="ml-2" /> : <ChevronDown size={16} className="ml-2" />}
         </Button>
-      </div>
 
-      <CalcChartDialog open={chartOpen} onOpenChange={setChartOpen} data={data} />
+        {chartOpen && (
+          <div className="mt-4" data-testid="calc-schedule-inline">
+            {scheduleRows.length === 0 ? (
+              <div className="py-8 text-center text-sm text-gray-500">Fill the inputs above to see {data.type === 'emi' ? 'the schedule' : 'the chart'}.</div>
+            ) : data.type === 'emi' ? (
+              <div className="overflow-x-auto -mx-1 max-h-[420px] overflow-y-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-xs border-collapse">
+                  <thead className="sticky top-0 bg-gray-100">
+                    <tr className="text-gray-700">
+                      <th className="text-left py-2 px-2 font-semibold border-b border-gray-300">Month</th>
+                      <th className="text-right py-2 px-2 font-semibold border-b border-gray-300">Principal</th>
+                      <th className="text-right py-2 px-2 font-semibold border-b border-gray-300">Interest</th>
+                      <th className="text-right py-2 px-2 font-semibold border-b border-gray-300">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scheduleRows.map((r) => (
+                      <tr key={r.month} className="border-b border-gray-100">
+                        <td className="py-1.5 px-2 text-gray-800">{r.month}</td>
+                        <td className="py-1.5 px-2 text-right text-gray-800">{formatPlain(r.principal, { decimals: 0 })}</td>
+                        <td className="py-1.5 px-2 text-right text-gray-800">{formatPlain(r.interest, { decimals: 0 })}</td>
+                        <td className="py-1.5 px-2 text-right text-gray-800">{formatPlain(r.balance, { decimals: 0 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="w-full h-[280px] border border-gray-200 rounded-lg p-2 bg-white">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scheduleRows} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
+                    <XAxis
+                      dataKey={data.type === 'compound' || data.type === 'simple' ? 'year' : 'month'}
+                      tick={{ fontSize: 11 }}
+                      stroke="#374151"
+                    />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#374151" tickFormatter={(v) => formatPlain(v, { decimals: 0 })} width={70} />
+                    <Tooltip formatter={(v) => formatPlain(v, { decimals: 0 })} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    {data.type === 'sip' && (
+                      <>
+                        <Line type="monotone" dataKey="invested" name="Invested" stroke="#374151" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} />
+                        <Line type="monotone" dataKey="value" name="Value" stroke="#111827" strokeWidth={2} dot={false} isAnimationActive={false} />
+                      </>
+                    )}
+                    {data.type === 'swp' && (
+                      <>
+                        <Line type="monotone" dataKey="balance" name="Balance" stroke="#111827" strokeWidth={2} dot={false} isAnimationActive={false} />
+                        <Line type="monotone" dataKey="withdrawn" name="Withdrawn" stroke="#374151" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} />
+                      </>
+                    )}
+                    {(data.type === 'compound' || data.type === 'simple') && (
+                      <Line type="monotone" dataKey="value" name="Value" stroke="#111827" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

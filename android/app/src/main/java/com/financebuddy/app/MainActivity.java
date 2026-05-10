@@ -1,26 +1,44 @@
 package com.financebuddy.app;
 
 import android.annotation.SuppressLint;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Base64;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.ConsoleMessage;
-import android.webkit.WebChromeClient;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Finance Buddy - 100% offline WebView wrapper.
  * Loads the bundled React app from file:///android_asset/index.html.
- * No internet permission is required: all data is stored in WebView's
- * localStorage on the device.
+ *
+ * Exposes a JavaScript bridge `window.FinanceBuddyAndroid` so the web UI
+ * can save PDF / JSON files directly into the system Downloads folder
+ * (and open the PDF in any installed PDF viewer / share sheet). This is
+ * the same pattern used by the petrol-pump app referenced by the user.
  */
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "FinanceBuddy";
+    private static final int SELECT_JSON_FILE_REQUEST = 102;
     private WebView webView;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -54,11 +72,13 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onConsoleMessage(ConsoleMessage cm) {
-                android.util.Log.d("FinanceBuddy",
-                    cm.message() + " -- @" + cm.lineNumber() + " (" + cm.sourceId() + ")");
+                Log.d(TAG, cm.message() + " -- @" + cm.lineNumber() + " (" + cm.sourceId() + ")");
                 return true;
             }
         });
+
+        // JS bridge for native PDF / backup handling.
+        webView.addJavascriptInterface(new FinanceBuddyBridge(this), "FinanceBuddyAndroid");
 
         webView.loadUrl("file:///android_asset/index.html");
     }
@@ -103,5 +123,146 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    // -------------- File picker for JSON import --------------
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SELECT_JSON_FILE_REQUEST && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
+            readJsonFile(data.getData());
+        }
+    }
+
+    private void readJsonFile(Uri uri) {
+        try (java.io.InputStream is = getContentResolver().openInputStream(uri)) {
+            if (is == null) return;
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
+            final String json = out.toString("UTF-8");
+            runOnUiThread(() -> {
+                String escaped = json
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
+                        .replace("\t", "\\t");
+                String js = "if (typeof window.handleAndroidImport === 'function') {"
+                        + " window.handleAndroidImport(\"" + escaped + "\"); }";
+                webView.evaluateJavascript(js, null);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to read picked JSON", e);
+        }
+    }
+
+    // -------------- JavaScript bridge --------------
+
+    public class FinanceBuddyBridge {
+        final Context context;
+
+        FinanceBuddyBridge(Context c) { context = c; }
+
+        @JavascriptInterface
+        public boolean isAvailable() { return true; }
+
+        /**
+         * Save a base64-encoded PDF into the system Downloads folder and
+         * open it with the user's preferred PDF viewer (which on Android
+         * usually exposes a Share action of its own).
+         */
+        @JavascriptInterface
+        public void openPdfWithViewer(String base64Pdf, String fileName) {
+            try {
+                byte[] bytes = Base64.decode(base64Pdf, Base64.DEFAULT);
+                Uri uri = saveToDownloads(fileName, "application/pdf", bytes);
+                if (uri != null) {
+                    runOnUiThread(() -> openWithViewer(uri, "application/pdf"));
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "openPdfWithViewer failed", e);
+                runOnUiThread(() -> Toast.makeText(context,
+                        "Failed to save PDF: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }
+
+        /**
+         * Save plain JSON text to Downloads. Used by the Share/Backup
+         * button when running inside the Android wrapper.
+         */
+        @JavascriptInterface
+        public void saveJsonBackup(String jsonData, String fileName) {
+            try {
+                Uri uri = saveToDownloads(fileName, "application/json",
+                        jsonData.getBytes("UTF-8"));
+                if (uri != null) {
+                    runOnUiThread(() -> Toast.makeText(context,
+                            "Backup saved to Downloads: " + fileName,
+                            Toast.LENGTH_LONG).show());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "saveJsonBackup failed", e);
+                runOnUiThread(() -> Toast.makeText(context,
+                        "Failed to save backup: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+        }
+
+        /**
+         * Open the system file picker so the user can pick a JSON backup
+         * to import. The chosen file is read and forwarded to JavaScript
+         * via window.handleAndroidImport(jsonString).
+         */
+        @JavascriptInterface
+        public void selectJsonBackup() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                intent.putExtra(Intent.EXTRA_MIME_TYPES,
+                        new String[]{"application/json", "text/plain"});
+                try {
+                    MainActivity.this.startActivityForResult(
+                            intent, SELECT_JSON_FILE_REQUEST);
+                } catch (Exception e) {
+                    Log.e(TAG, "selectJsonBackup failed", e);
+                }
+            });
+        }
+    }
+
+    private Uri saveToDownloads(String fileName, String mime, byte[] bytes) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH,
+                Environment.DIRECTORY_DOWNLOADS);
+        Uri uri = resolver.insert(MediaStore.Files.getContentUri("external"), values);
+        if (uri == null) throw new IOException("Could not create Downloads entry");
+        try (OutputStream os = resolver.openOutputStream(uri)) {
+            if (os == null) throw new IOException("Output stream is null");
+            os.write(bytes);
+            os.flush();
+        }
+        return uri;
+    }
+
+    private void openWithViewer(Uri uri, String mime) {
+        Intent view = new Intent(Intent.ACTION_VIEW);
+        view.setDataAndType(uri, mime);
+        view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_ACTIVITY_NO_HISTORY);
+        try {
+            startActivity(Intent.createChooser(view, "Open with"));
+        } catch (Exception e) {
+            Toast.makeText(this,
+                    "No PDF viewer found. Saved to Downloads.",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 }

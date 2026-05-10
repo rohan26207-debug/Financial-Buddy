@@ -228,6 +228,16 @@ export async function downloadReportPDF({ state }) {
   return doc;
 }
 
+// Returns the PDF as a base64 string (without the data URI prefix).
+// Used by the Android JS bridge to hand the PDF to the native
+// system: it gets saved to Downloads and opened in a PDF viewer.
+export async function getReportPDFBase64({ state }) {
+  const doc = await generateReportPDF({ state });
+  const dataUri = doc.output('datauristring');
+  const idx = dataUri.indexOf('base64,');
+  return idx >= 0 ? dataUri.slice(idx + 'base64,'.length) : dataUri;
+}
+
 export async function getReportPDFBlob({ state }) {
   const doc = await generateReportPDF({ state });
   return doc.output('blob');

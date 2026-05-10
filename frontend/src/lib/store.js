@@ -91,6 +91,18 @@ export function StoreProvider({ children }) {
     setState({ ...defaultState, ...parsed, settings: { ...defaultState.settings, ...(parsed.settings || {}) } });
   }, []);
 
+  // Expose a global hook so the native Android bridge (MainActivity.java)
+  // can hand a picked JSON backup back to the React app via:
+  //   window.handleAndroidImport(jsonString)
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    window.handleAndroidImport = (jsonString) => {
+      try { importData(jsonString); }
+      catch (e) { console.error('handleAndroidImport failed', e); }
+    };
+    return () => { try { delete window.handleAndroidImport; } catch (e) { /* noop */ } };
+  }, [importData]);
+
   const resetData = useCallback(() => {
     setState(emptyState);
   }, []);

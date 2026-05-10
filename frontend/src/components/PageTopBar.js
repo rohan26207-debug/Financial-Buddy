@@ -2,7 +2,16 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Menu, ZoomIn, ZoomOut, Sun, Moon, Share2, FileText, Loader2 } from 'lucide-react';
 import { useStore } from '../lib/store';
-import { downloadReportPDF, getReportPDFBlob } from '../lib/pdf';
+import { downloadReportPDF, getReportPDFBlob, getReportPDFBase64 } from '../lib/pdf';
+
+// Returns the native Android bridge if it's available, else null.
+// The bridge is injected by MainActivity.java as window.FinanceBuddyAndroid.
+function getAndroidBridge() {
+  if (typeof window === 'undefined') return null;
+  const b = window.FinanceBuddyAndroid;
+  if (b && typeof b.openPdfWithViewer === 'function') return b;
+  return null;
+}
 
 export default function PageTopBar() {
   const { openDrawer } = useOutletContext() || {};
@@ -20,10 +29,20 @@ export default function PageTopBar() {
     if (busy) return;
     setBusy('pdf');
     try {
-      await downloadReportPDF({ state });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `finance-buddy-report-${stamp}.pdf`;
+      const bridge = getAndroidBridge();
+      if (bridge) {
+        // Native: save into Downloads and open in PDF viewer / share sheet.
+        const base64 = await getReportPDFBase64({ state });
+        bridge.openPdfWithViewer(base64, filename);
+      } else {
+        // Browser: download via jsPDF blob.
+        await downloadReportPDF({ state });
+      }
       markBackedUp();
     } catch (e) {
-      console.error(e);
+      console.error('PDF export failed', e);
     } finally {
       setBusy(null);
     }
@@ -34,19 +53,26 @@ export default function PageTopBar() {
     setBusy('share');
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const jsonText = exportData();
+      const jsonName = `finance-buddy-backup-${stamp}.json`;
 
+      const bridge = getAndroidBridge();
+      if (bridge && typeof bridge.saveJsonBackup === 'function') {
+        // Native Android: save backup to Downloads (silent, no toasts in our UI).
+        bridge.saveJsonBackup(jsonText, jsonName);
+        markBackedUp();
+        return;
+      }
+
+      // Web fallback: try Web Share API with both PDF + JSON files.
       let pdfFile = null;
       try {
         const pdfBlob = await getReportPDFBlob({ state });
         pdfFile = new File([pdfBlob], `finance-buddy-report-${stamp}.pdf`, { type: 'application/pdf' });
       } catch (e) {
-        // If PDF generation fails we silently fall back to JSON-only sharing.
-        console.warn('finance-buddy: PDF generation failed during share', e);
+        console.warn('PDF generation failed during share', e);
       }
-
-      const jsonText = exportData();
-      const jsonFile = new File([jsonText], `finance-buddy-backup-${stamp}.json`, { type: 'application/json' });
-
+      const jsonFile = new File([jsonText], jsonName, { type: 'application/json' });
       const tryFiles = [];
       if (pdfFile) tryFiles.push(pdfFile);
       tryFiles.push(jsonFile);
@@ -68,17 +94,12 @@ export default function PageTopBar() {
         markBackedUp();
         return;
       }
-      // Silent clipboard fallback (no UI popups by design)
-      try {
-        await navigator.clipboard.writeText(jsonText);
-        markBackedUp();
-      } catch (e) {
-        // Clipboard may be unavailable in WebView/file:// contexts; nothing to do.
-        console.warn('finance-buddy: clipboard fallback failed', e);
-      }
+      // Last-resort silent clipboard fallback
+      try { await navigator.clipboard.writeText(jsonText); markBackedUp(); }
+      catch (e) { console.warn('clipboard fallback failed', e); }
     } catch (e) {
       if (e && e.name === 'AbortError') return;
-      console.error(e);
+      console.error('Share failed', e);
     } finally {
       setBusy(null);
     }
@@ -92,30 +113,31 @@ export default function PageTopBar() {
         onClick={openDrawer}
         aria-label="Open menu"
         className={iconBtn}
+        data-testid="menu-btn"
       >
         <Menu size={22} />
       </button>
 
       <div className="flex items-center gap-0.5">
-        <button onClick={onShare} disabled={!!busy} aria-label="Share data" className={iconBtn}>
+        <button onClick={onShare} disabled={!!busy} aria-label="Share data" className={iconBtn} data-testid="share-btn">
           {busy === 'share' ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
         </button>
-        <button onClick={onPDF} disabled={!!busy} aria-label="Download PDF report" className={iconBtn}>
+        <button onClick={onPDF} disabled={!!busy} aria-label="Download PDF report" className={iconBtn} data-testid="pdf-btn">
           {busy === 'pdf' ? <Loader2 size={20} className="animate-spin" /> : <FileText size={20} />}
         </button>
 
         <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-        <button onClick={dec} aria-label="Decrease text size" disabled={zoom <= 0.75} className={iconBtn}>
+        <button onClick={dec} aria-label="Decrease text size" disabled={zoom <= 0.75} className={iconBtn} data-testid="zoom-out-btn">
           <ZoomOut size={20} />
         </button>
         <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 min-w-[34px] text-center select-none">
           {Math.round(zoom * 100)}%
         </span>
-        <button onClick={inc} aria-label="Increase text size" disabled={zoom >= 1.5} className={iconBtn}>
+        <button onClick={inc} aria-label="Increase text size" disabled={zoom >= 1.5} className={iconBtn} data-testid="zoom-in-btn">
           <ZoomIn size={20} />
         </button>
-        <button onClick={toggleTheme} aria-label="Toggle dark mode" className={iconBtn + " ml-1"}>
+        <button onClick={toggleTheme} aria-label="Toggle dark mode" className={iconBtn + " ml-1"} data-testid="theme-btn">
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
