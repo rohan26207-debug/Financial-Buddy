@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { seedData } from './seed';
 
-const STORAGE_KEY = 'finance_buddy_data_v1';
+const STORAGE_KEY = 'finance_buddy_data_v2';
 
 // Empty state used by Reset All Data and as the baseline.
 const emptyState = {
@@ -13,8 +12,8 @@ const emptyState = {
   calculators: [],
   contact: { name: '', phone: '', email: '', address: '' },
   settings: {
-    currency: 'USD',
-    locale: 'en-US',
+    currency: 'INR',
+    locale: 'en-IN',
     theme: 'light',
     zoom: 1,
     autoBackupEnabled: false,
@@ -23,16 +22,8 @@ const emptyState = {
   },
 };
 
-// First-launch state (with seed demo data so the app feels alive on first open).
-const defaultState = {
-  ...emptyState,
-  loans: seedData.loans,
-  investments: seedData.investments,
-  incomes: seedData.incomes,
-  reminders: seedData.reminders,
-  todos: seedData.todos,
-  calculators: seedData.calculators,
-};
+// First-launch state: start completely empty (no seed data).
+const defaultState = { ...emptyState };
 
 function loadState() {
   try {
