@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "FinanceBuddy";
     private static final int SELECT_JSON_FILE_REQUEST = 102;
     private static final int FILE_CHOOSER_REQUEST = 103;
+    private static final int SELECT_PDF_FILE_REQUEST = 104;
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
 
@@ -159,18 +160,29 @@ public class MainActivity extends AppCompatActivity {
         }
         if (requestCode == SELECT_JSON_FILE_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getData() != null) {
-            readJsonFile(data.getData());
+            readPickedJson(data.getData());
+            return;
+        }
+        if (requestCode == SELECT_PDF_FILE_REQUEST && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
+            readPickedPdf(data.getData());
         }
     }
 
-    private void readJsonFile(Uri uri) {
+    private byte[] readAllBytes(Uri uri) throws IOException {
         try (java.io.InputStream is = getContentResolver().openInputStream(uri)) {
-            if (is == null) return;
+            if (is == null) throw new IOException("Cannot open " + uri);
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             byte[] buf = new byte[8192];
             int n;
             while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
-            final String json = out.toString("UTF-8");
+            return out.toByteArray();
+        }
+    }
+
+    private void readPickedJson(Uri uri) {
+        try {
+            final String json = new String(readAllBytes(uri), "UTF-8");
             runOnUiThread(() -> {
                 String escaped = json
                         .replace("\\", "\\\\")
@@ -183,7 +195,25 @@ public class MainActivity extends AppCompatActivity {
                 webView.evaluateJavascript(js, null);
             });
         } catch (Exception e) {
-            Log.e(TAG, "Failed to read picked JSON", e);
+            Log.e(TAG, "readPickedJson failed", e);
+            runOnUiThread(() -> Toast.makeText(this,
+                    "Could not read JSON file", Toast.LENGTH_LONG).show());
+        }
+    }
+
+    private void readPickedPdf(Uri uri) {
+        try {
+            byte[] bytes = readAllBytes(uri);
+            final String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+            runOnUiThread(() -> {
+                String js = "if (typeof window.handleAndroidPDFImport === 'function') {"
+                        + " window.handleAndroidPDFImport(\"" + b64 + "\"); }";
+                webView.evaluateJavascript(js, null);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "readPickedPdf failed", e);
+            runOnUiThread(() -> Toast.makeText(this,
+                    "Could not read PDF file", Toast.LENGTH_LONG).show());
         }
     }
 
@@ -249,16 +279,76 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                // Accept JSON and PDF (PDF files now carry an embedded JSON backup
-                // that the React app can extract via Backup -> Import from PDF).
-                intent.setType("*/*");
+                intent.setType("application/json");
                 intent.putExtra(Intent.EXTRA_MIME_TYPES,
-                        new String[]{"application/json", "application/pdf", "text/plain"});
+                        new String[]{"application/json", "text/plain", "*/*"});
                 try {
                     MainActivity.this.startActivityForResult(
                             intent, SELECT_JSON_FILE_REQUEST);
                 } catch (Exception e) {
                     Log.e(TAG, "selectJsonBackup failed", e);
+                    Toast.makeText(context,
+                            "Could not open file picker", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        /**
+         * Open the system file picker to choose a Finance-Buddy-generated
+         * PDF. The PDF bytes are forwarded to JavaScript via
+         *   window.handleAndroidPDFImport(base64String)
+         * which then extracts the embedded JSON backup and restores data.
+         */
+        @JavascriptInterface
+        public void selectPdfBackup() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/pdf");
+                intent.putExtra(Intent.EXTRA_MIME_TYPES,
+                        new String[]{"application/pdf", "*/*"});
+                try {
+                    MainActivity.this.startActivityForResult(
+                            intent, SELECT_PDF_FILE_REQUEST);
+                } catch (Exception e) {
+                    Log.e(TAG, "selectPdfBackup failed", e);
+                    Toast.makeText(context,
+                            "Could not open file picker", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        /**
+         * Share the PDF report only via the system share sheet
+         * (Email / WhatsApp / Drive / Bluetooth / etc.).
+         * The PDF already contains the embedded JSON backup so a single
+         * file is enough for full data restore.
+         */
+        @JavascriptInterface
+        public void sharePdf(String pdfBase64, String pdfFileName) {
+            runOnUiThread(() -> {
+                try {
+                    if (pdfBase64 == null || pdfBase64.length() == 0) {
+                        Toast.makeText(context, "PDF not ready", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    byte[] pdfBytes = Base64.decode(pdfBase64, Base64.DEFAULT);
+                    Uri uri = writeToCacheAndUri(
+                            pdfFileName != null ? pdfFileName : "finance-buddy-report.pdf",
+                            pdfBytes);
+                    if (uri == null) return;
+
+                    Intent intent = new Intent(Intent.ACTION_SEND);
+                    intent.setType("application/pdf");
+                    intent.putExtra(Intent.EXTRA_STREAM, uri);
+                    intent.setClipData(android.content.ClipData.newRawUri("", uri));
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(intent, "Share PDF"));
+                } catch (Exception e) {
+                    Log.e(TAG, "sharePdf failed", e);
+                    Toast.makeText(context,
+                            "Could not share: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
                 }
             });
         }

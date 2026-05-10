@@ -94,13 +94,45 @@ export function StoreProvider({ children }) {
   // Expose a global hook so the native Android bridge (MainActivity.java)
   // can hand a picked JSON backup back to the React app via:
   //   window.handleAndroidImport(jsonString)
+  // and a picked PDF (with embedded backup) via:
+  //   window.handleAndroidPDFImport(base64String)
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     window.handleAndroidImport = (jsonString) => {
       try { importData(jsonString); }
       catch (e) { console.error('handleAndroidImport failed', e); }
     };
-    return () => { try { delete window.handleAndroidImport; } catch (e) { /* noop */ } };
+    window.handleAndroidPDFImport = async (base64) => {
+      try {
+        // base64 -> Uint8Array -> Blob -> File
+        const bin = atob(base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const file = new File([blob], 'imported.pdf', { type: 'application/pdf' });
+        const { extractBackupFromPDF } = await import('./pdf');
+        const json = await extractBackupFromPDF(file);
+        if (!json) {
+          window.dispatchEvent(new CustomEvent('fb:pdf-import-error', {
+            detail: 'No Finance Buddy data found in this PDF.',
+          }));
+          return;
+        }
+        importData(json);
+        window.dispatchEvent(new CustomEvent('fb:pdf-import-ok'));
+      } catch (e) {
+        console.error('handleAndroidPDFImport failed', e);
+        window.dispatchEvent(new CustomEvent('fb:pdf-import-error', {
+          detail: 'Could not import this PDF. The file may be damaged.',
+        }));
+      }
+    };
+    return () => {
+      try {
+        delete window.handleAndroidImport;
+        delete window.handleAndroidPDFImport;
+      } catch (e) { /* noop */ }
+    };
   }, [importData]);
 
   const resetData = useCallback(() => {

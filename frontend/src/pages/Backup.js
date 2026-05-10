@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Download, Upload, ChevronRight, Mail, BellRing, FileUp, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { Button } from '../components/ui/button';
@@ -49,6 +49,19 @@ export default function Backup() {
   const pdfImportRef = useRef(null);
   const [pdfImportStatus, setPdfImportStatus] = useState({ state: 'idle', message: '' }); // idle | busy | ok | error
 
+  // Native Android PDF imports go through window.handleAndroidPDFImport
+  // (registered in store.js). It dispatches custom events when done.
+  useEffect(() => {
+    const onOk = () => setPdfImportStatus({ state: 'ok', message: 'Data restored from PDF.' });
+    const onErr = (e) => setPdfImportStatus({ state: 'error', message: e?.detail || 'Import failed.' });
+    window.addEventListener('fb:pdf-import-ok', onOk);
+    window.addEventListener('fb:pdf-import-error', onErr);
+    return () => {
+      window.removeEventListener('fb:pdf-import-ok', onOk);
+      window.removeEventListener('fb:pdf-import-error', onErr);
+    };
+  }, []);
+
   const triggerDownload = () => {
     const json = exportData();
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -79,7 +92,16 @@ export default function Backup() {
     catch (e) { console.error(e); }
   };
 
-  const onImportClick = () => fileInputRef.current?.click();
+  const onImportClick = () => {
+    const bridge = getAndroidBridgeOrNull();
+    if (bridge && typeof bridge.selectJsonBackup === 'function') {
+      // Native Android: opens the system file picker via the bridge and
+      // calls window.handleAndroidImport(jsonString) when the user picks.
+      bridge.selectJsonBackup();
+      return;
+    }
+    fileInputRef.current?.click();
+  };
 
   const onFileChosen = async (e) => {
     const file = e.target.files?.[0];
@@ -126,6 +148,11 @@ export default function Backup() {
 
   const onImportFromPDFClick = () => {
     setPdfImportStatus({ state: 'idle', message: '' });
+    const bridge = getAndroidBridgeOrNull();
+    if (bridge && typeof bridge.selectPdfBackup === 'function') {
+      bridge.selectPdfBackup();
+      return;
+    }
     pdfImportRef.current?.click();
   };
 

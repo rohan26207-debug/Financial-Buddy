@@ -55,24 +55,23 @@ export default function PageTopBar() {
     setBusy('share');
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const jsonText = exportData();
-      const jsonName = `finance-buddy-backup-${stamp}.json`;
       const pdfName = `finance-buddy-report-${stamp}.pdf`;
 
       const bridge = getAndroidBridge();
-      if (bridge && typeof bridge.shareBackup === 'function') {
-        // Native Android: open the system share sheet (Email/WhatsApp/Drive
-        // /Bluetooth/etc.) with both the PDF report and the JSON backup
-        // attached.
+      if (bridge && typeof bridge.sharePdf === 'function') {
+        // Native Android: open the system share sheet with ONLY the PDF
+        // attached (the PDF embeds the full JSON backup, so a single
+        // file is enough for any recipient to restore the data).
         let pdfBase64 = '';
         try { pdfBase64 = await getReportPDFBase64({ state }); }
         catch (e) { console.warn('PDF generation failed during share', e); }
-        bridge.shareBackup(pdfBase64, pdfName, jsonText, jsonName);
+        if (!pdfBase64) return;
+        bridge.sharePdf(pdfBase64, pdfName);
         markBackedUp();
         return;
       }
 
-      // Web fallback: try Web Share API with both PDF + JSON files.
+      // Web fallback: share only the PDF via the Web Share API.
       let pdfFile = null;
       try {
         const pdfBlob = await getReportPDFBlob({ state });
@@ -80,31 +79,27 @@ export default function PageTopBar() {
       } catch (e) {
         console.warn('PDF generation failed during share', e);
       }
-      const jsonFile = new File([jsonText], jsonName, { type: 'application/json' });
-      const tryFiles = [];
-      if (pdfFile) tryFiles.push(pdfFile);
-      tryFiles.push(jsonFile);
+      if (!pdfFile) return;
 
-      if (navigator.canShare && navigator.canShare({ files: tryFiles })) {
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
-          title: 'Finance Buddy backup',
-          text: 'Finance Buddy data backup and report.',
-          files: tryFiles,
+          title: 'Finance Buddy report',
+          files: [pdfFile],
         });
         markBackedUp();
         return;
       }
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Finance Buddy backup',
-          text: jsonText.length < 1500 ? jsonText : 'Finance Buddy backup (open the app to export full data).',
-        });
-        markBackedUp();
-        return;
-      }
-      // Last-resort silent clipboard fallback
-      try { await navigator.clipboard.writeText(jsonText); markBackedUp(); }
-      catch (e) { console.warn('clipboard fallback failed', e); }
+
+      // No native share -> save the PDF locally as a graceful fallback.
+      const url = URL.createObjectURL(pdfFile);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      markBackedUp();
     } catch (e) {
       if (e && e.name === 'AbortError') return;
       console.error('Share failed', e);
