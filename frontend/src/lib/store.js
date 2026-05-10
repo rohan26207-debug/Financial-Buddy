@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 
-const STORAGE_KEY = 'finance_buddy_data_v2';
+const STORAGE_KEY = 'finance_buddy_data_v1';
 
 // Empty state used by Reset All Data and as the baseline.
 const emptyState = {
