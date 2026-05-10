@@ -22,7 +22,7 @@ export default function Layout() {
 
   return (
     <div className="app-shell flex flex-col">
-      <main className="flex-1 pb-20">
+      <main className="flex-1 min-h-0 pb-20">
         <Outlet context={outletContext} />
       </main>
 
