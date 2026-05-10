@@ -93,13 +93,27 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Mobile-app-style back navigation:
-     *   - On the home tab (Investments) -> do NOTHING. The user must
-     *     swipe up / use the system gesture to exit. This prevents
-     *     accidental exits from the back button.
-     *   - On any other screen -> jump to Investments and clear the
-     *     WebView history.
+     *   1. Ask the React app first via window.fbConsumeBack() — if any
+     *      dialog/preview is open it will close itself and return true.
+     *   2. Otherwise:
+     *      - On the home tab (Investments) -> do nothing. The user must
+     *        swipe up to exit.
+     *      - On any other screen -> jump to Investments and clear the
+     *        WebView history.
      */
     private void goHomeOrExitApp() {
+        if (webView == null) return;
+        webView.evaluateJavascript(
+                "(typeof window.fbConsumeBack === 'function' && window.fbConsumeBack()) ? 1 : 0",
+                value -> {
+                    boolean handled = value != null && value.contains("1");
+                    if (!handled) {
+                        nativeHomeOrExit();
+                    }
+                });
+    }
+
+    private void nativeHomeOrExit() {
         if (webView == null) return;
         String url = webView.getUrl();
         boolean atHome = url == null

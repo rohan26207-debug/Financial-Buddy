@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from './ui/dialog';
 import { useStore, useCurrency } from '../lib/store';
+import { useBackHandler } from '../lib/backStack';
 
 /**
  * ReportPreview
@@ -60,6 +61,7 @@ function Section({ title, children }) {
 export default function ReportPreview({ open, onOpenChange }) {
   const { state } = useStore();
   const { formatPlain } = useCurrency();
+  useBackHandler(open, () => onOpenChange(false));
   const contact = state.contact || {};
   const investments = state.investments || [];
   const incomes = state.incomes || [];
