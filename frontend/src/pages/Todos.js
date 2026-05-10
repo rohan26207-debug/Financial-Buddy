@@ -75,22 +75,24 @@ export default function Todos() {
         )}
         {filtered.map((t) => (
           <li key={t.id}>
-            <button onClick={() => startEdit(t)} className="tap-row w-full flex items-center gap-3 py-3 text-left">
-              <button
-                onClick={(e) => toggleDone(e, t)}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${t.done ? 'bg-teal-600 border-teal-600' : 'border-teal-500 bg-white hover:bg-teal-50'}`}
-              >
-                {t.done && <Check size={14} className="text-white" strokeWidth={3} />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className={`text-base font-bold ${t.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>{t.title}</div>
-                <div className="text-sm text-gray-500">
-                  <span className={`font-semibold ${priorityColor[t.priority] || 'text-gray-500'}`}>{t.priority}</span>
-                  {t.due ? ` \u2022 Due: ${formatDateShort(t.due)}` : ''}
+            <SwipeRow onDelete={() => removeItem('todos', t.id)} testId={`todo-${t.id}`}>
+              <button onClick={() => startEdit(t)} className="tap-row w-full flex items-center gap-3 py-3 text-left bg-white px-1">
+                <button
+                  onClick={(e) => toggleDone(e, t)}
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${t.done ? 'bg-teal-600 border-teal-600' : 'border-teal-500 bg-white hover:bg-teal-50'}`}
+                >
+                  {t.done && <Check size={14} className="text-white" strokeWidth={3} />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-base font-bold ${t.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>{t.title}</div>
+                  <div className="text-sm text-gray-500">
+                    <span className={`font-semibold ${priorityColor[t.priority] || 'text-gray-500'}`}>{t.priority}</span>
+                    {t.due ? ` \u2022 Due: ${formatDateShort(t.due)}` : ''}
+                  </div>
                 </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-300" />
-            </button>
+                <ChevronRight size={20} className="text-gray-300" />
+              </button>
+            </SwipeRow>
           </li>
         ))}
       </ul>

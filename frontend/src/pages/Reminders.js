@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import PageTopBar from '../components/PageTopBar';
+import SwipeRow from '../components/SwipeRow';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 
@@ -62,21 +63,23 @@ export default function Reminders() {
         )}
         {filtered.map((r) => (
           <li key={r.id}>
-            <button onClick={() => startEdit(r)} className="tap-row w-full flex items-start gap-3 py-3 text-left">
-              <button
-                onClick={(e) => toggleDone(e, r)}
-                className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${r.done ? 'bg-teal-600 border-teal-600' : 'border-teal-500 bg-white hover:bg-teal-50'}`}
-              >
-                {r.done && <Check size={14} className="text-white" strokeWidth={3} />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className={`text-base font-bold ${r.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>{r.title}</div>
-                <div className="text-sm text-gray-500">
-                  {formatDateShort(r.date)}{r.note ? ` \u2022 ${r.note}` : ''}
+            <SwipeRow onDelete={() => removeItem('reminders', r.id)} testId={`reminder-${r.id}`}>
+              <button onClick={() => startEdit(r)} className="tap-row w-full flex items-start gap-3 py-3 text-left bg-white px-1">
+                <button
+                  onClick={(e) => toggleDone(e, r)}
+                  className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${r.done ? 'bg-teal-600 border-teal-600' : 'border-teal-500 bg-white hover:bg-teal-50'}`}
+                >
+                  {r.done && <Check size={14} className="text-white" strokeWidth={3} />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-base font-bold ${r.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>{r.title}</div>
+                  <div className="text-sm text-gray-500">
+                    {formatDateShort(r.date)}{r.note ? ` \u2022 ${r.note}` : ''}
+                  </div>
                 </div>
-              </div>
-              <ChevronRight size={20} className="text-gray-300 mt-1" />
-            </button>
+                <ChevronRight size={20} className="text-gray-300 mt-1" />
+              </button>
+            </SwipeRow>
           </li>
         ))}
       </ul>
