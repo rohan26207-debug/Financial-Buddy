@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Menu, ZoomIn, ZoomOut, Sun, Moon, Share2, FileText, Loader2 } from 'lucide-react';
+import { Menu, ZoomIn, ZoomOut, Sun, Moon, Share2, FileText, Loader2, Eye } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { downloadReportPDF, getReportPDFBlob, getReportPDFBase64 } from '../lib/pdf';
+import ReportPreview from './ReportPreview';
 
 // Returns the native Android bridge if it's available, else null.
 // The bridge is injected by MainActivity.java as window.FinanceBuddyAndroid.
@@ -21,6 +22,7 @@ export default function PageTopBar() {
   const theme = state.settings?.theme || 'light';
   const zoom = Number(state.settings?.zoom) || 1;
   const [busy, setBusy] = useState(null); // 'pdf' | 'share' | null
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const setZoom = (z) => updateSettings({ zoom: Math.min(1.5, Math.max(0.75, Number(z.toFixed(2)))) });
   const inc = () => setZoom(zoom + 0.1);
@@ -122,6 +124,9 @@ export default function PageTopBar() {
       </button>
 
       <div className="flex items-center gap-0.5">
+        <button onClick={() => setPreviewOpen(true)} aria-label="View report" className={iconBtn} data-testid="view-report-btn">
+          <Eye size={20} />
+        </button>
         <button onClick={onShare} disabled={!!busy} aria-label="Share data" className={iconBtn} data-testid="share-btn">
           {busy === 'share' ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
         </button>
@@ -144,6 +149,8 @@ export default function PageTopBar() {
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
+
+      <ReportPreview open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }
